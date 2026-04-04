@@ -3,11 +3,6 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	http_response_code(200);
-	exit();
-}
-
 include_once '../config/database.php';
 
 function respond($statusCode, $success, $message, $data = null)
@@ -39,10 +34,6 @@ function ensureExists($db, $table, $id)
 	$stmt->bind_param("i", $id);
 	$stmt->execute();
 	return $stmt->get_result()->num_rows > 0;
-}
-
-if ($db->connect_error) {
-	respond(500, false, "Database connection failed");
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
