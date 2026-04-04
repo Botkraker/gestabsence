@@ -14,9 +14,15 @@ $data = json_decode(file_get_contents("php://input"));
 //input here (seanceid:1,listabsence:[1,"present"])
 $response = array();
 $sql="SELECT * FROM `seances`";
-if (isset($_GET["id"])){
-    $id=$_GET["id"];
-    $sql=$sql."WHERE id=$id";
+if(isset($_GET["enseignantid"])){
+    $id=$_GET["enseignantid"];
+    $sql=$sql."WHERE `enseignant_id`=$id";
+}
+else{
+    if (isset($_GET["id"])){
+        $id=$_GET["id"];
+        $sql=$sql."WHERE id=$id";
+    }
 }
 $result= $db->query($sql.";");
 if ($result->num_rows>0){
