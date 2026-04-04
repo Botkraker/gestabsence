@@ -15,17 +15,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 include_once '../config/database.php';
-
-function respond($statusCode, $success, $message, $data = null)
-{
-    http_response_code($statusCode);
-    $response = array(
-        "success" => $success ? 1 : 0,
-        "message" => $message
-    );
-
-    if ($data !== null) {
-        $response["data"] = $data;
+$data = json_decode(file_get_contents("php://input"));
+//input here (seanceid:1,listabsence:[1,"present"])
+$response = array();
+$sql="SELECT * FROM `seances`";
+if(isset($_GET["enseignantid"])){
+    $id=$_GET["enseignantid"];
+    $sql=$sql."WHERE `enseignant_id`=$id";
+}
+else{
+    if (isset($_GET["id"])){
+        $id=$_GET["id"];
+        $sql=$sql."WHERE id=$id";
+    }
+}
+$result= $db->query($sql.";");
+if ($result->num_rows>0){
+    while ($row = $result->fetch_assoc()) {
+        $seances_arr[] = $row;
     }
 
     echo json_encode($response);
