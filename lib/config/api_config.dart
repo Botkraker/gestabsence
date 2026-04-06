@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// Replace with the current IPv4 address
-const String baseUrl = 'http://10.0.2.2:8067';
+// On this setup, the PHP server listens on localhost:8067.
+const String baseUrl = 'http://localhost:8067';
 
 /*
 =============================================================================

@@ -22,27 +22,26 @@ if (!empty($data->email)&& !empty($data->password)){
     $req->execute();$req=$req->get_result();
     if($req->num_rows > 0){
         $tmp=array();
-        $response["user"]=array();
         $cur=mysqli_fetch_array($req);
         $tmp["id"]=$cur["id"];
         $tmp["name"]=$cur["nom"];
         $tmp["lastname"]=$cur["prenom"];
         $tmp["role"]=$cur["role"];
-        array_push($response["user"],$tmp);
+        $response["user"]=$tmp;
         http_response_code(200);
-        $response["success"]=1;
+        $response["success"]=true;
         echo json_encode($response);
         }
         else{
             http_response_code(401);
-            $response["success"]=0;
+            $response["success"]=false;
             $response["message"]="No User Found";
             echo json_encode($response);
         }
 }
 else{
     http_response_code(400);
-    $response["success"]=0;
+    $response["success"]=false;
     $response["message"]="email or password not provided";
     echo json_encode($response);
 }
