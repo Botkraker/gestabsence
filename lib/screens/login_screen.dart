@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../config/api_config.dart';
+import '../services/api_service.dart';
 import 'admin/admin_home.dart';
 import 'enseignant/enseignant_home.dart';
 import 'etudiant/etudiant_home.dart';
@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 		if (!mounted) return;
 
-		final success = response['success'] == true || response['success'] == 1;
+		final success = response['success'] == 1;
 		final userData = response['user'] is List
 				? (response['user'] as List).isNotEmpty
 					? response['user'][0]

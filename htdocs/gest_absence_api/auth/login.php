@@ -29,19 +29,19 @@ if (!empty($data->email)&& !empty($data->password)){
         $tmp["role"]=$cur["role"];
         $response["user"]=$tmp;
         http_response_code(200);
-        $response["success"]=true;
+        $response["success"]=1;
         echo json_encode($response);
         }
         else{
             http_response_code(401);
-            $response["success"]=false;
+            $response["success"]=0;
             $response["message"]="No User Found";
             echo json_encode($response);
         }
 }
 else{
     http_response_code(400);
-    $response["success"]=false;
+    $response["success"]=0;
     $response["message"]="email or password not provided";
     echo json_encode($response);
 }
