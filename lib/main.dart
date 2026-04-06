@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/themeapp.dart';
 import 'screens/login_screen.dart';
 
 void main() {
@@ -26,10 +27,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Gest Absence',
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
-      ),
+      theme: appTheme(),
       home: _activeScreen ?? LoginScreen(onLoginSuccess: _openScreen),
     );
   }
