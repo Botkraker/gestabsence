@@ -81,6 +81,10 @@ class ApiService {
     return get('/admin/etudiants.php');
   }
 
+  static Future<Map<String, dynamic>> getAdminStudentStats() async {
+    return get('/admin/stats.php');
+  }
+
   static Future<Map<String, dynamic>> getStudent(int id) async {
     return get('/admin/etudiants.php?id=$id');
   }
