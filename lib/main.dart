@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/screens/login_screen.dart';
 import 'package:gestabsence/themeapp.dart';
-import 'screens/admin/admin_home.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -28,7 +29,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       title: 'Gest Absence',
       theme: appTheme(),
-      home: const AdminHome(name: 'Admin'),
+      home: _activeScreen ?? LoginScreen(onLoginSuccess: _openScreen),
     );
   }
 }

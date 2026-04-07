@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestabsence/themeapp.dart';
-
+import 'package:gestabsence/screens/enseignant/appel_screen.dart';
+import 'package:gestabsence/screens/enseignant/mes_seances_screen.dart';
 
 class EnseignantHome extends StatefulWidget {
   const EnseignantHome({super.key, required this.userId, required this.name});
@@ -27,11 +28,9 @@ class _EnseignantHomeState extends State<EnseignantHome> {
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                icon: Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
               ),
-              // Avatar
               const SizedBox(width: 25),
-              // App name
               Text('DASHBOARD', style: ThemeTextStyles.headlineSmall),
             ],
           ),
@@ -47,17 +46,34 @@ class _EnseignantHomeState extends State<EnseignantHome> {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          children: [
-            Text(
-              widget.name.isEmpty
-                  ? 'Welcome, Enseignant (ID: ${widget.userId})'
-                  : 'Welcome, ${widget.name} (ID: ${widget.userId})',
-              style: const TextStyle(fontSize: 20, color: Colors.white),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Welcome, Dr.${widget.name}',
+                style: ThemeTextStyles.display,
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 24),
+              _buildStatCard(
+                title: 'Total étudiants',
+                value: '124',
+                height: 150,
+              ),
+              const SizedBox(height: 16),
+              _buildStatCard(title: 'Présence Moy', value: '85%', height: 150),
+              const SizedBox(height: 16),
+              _buildStatCard(
+                title: 'Prochaine séance',
+                value: 'Math 101 - 08:30, Salle B2',
+                subtitle: 'La séance la plus proche est dans 45 minutes.',
+                height: 170,
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -67,14 +83,20 @@ class _EnseignantHomeState extends State<EnseignantHome> {
             _currentIndex = index;
           });
           switch (index) {
-            case 0:
-              print("Dashboard clicked");
-              break;
             case 1:
-              print("Seances clicked");
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) =>  MesSeancesScreen(userId: widget.userId, name: widget.name)),
+              );
               break;
             case 2:
-              print("Appel clicked");
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AppelScreen(userId: widget.userId, name: widget.name),
+                ),
+              );
               break;
             default:
           }
@@ -92,7 +114,39 @@ class _EnseignantHomeState extends State<EnseignantHome> {
             icon: Icon(Icons.fact_check_outlined),
             label: "Appel",
           ),
-        ],backgroundColor: ThemeColors.borderSubtle,elevation: 0,
+        ],
+        backgroundColor: ThemeColors.borderSubtle,
+        elevation: 0,
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    String? subtitle,
+    double height = 150,
+  }) {
+    return SizedBox(
+      height: height,
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: ThemeTextStyles.bodyLarge),
+              const SizedBox(height: 12),
+              Text(value, style: ThemeTextStyles.statNumber),
+              if (subtitle != null) ...[
+                const SizedBox(height: 10),
+                Text(subtitle, style: ThemeTextStyles.bodySmall),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
