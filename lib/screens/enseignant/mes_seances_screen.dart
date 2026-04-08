@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:gestabsence/main.dart';
 import 'package:gestabsence/models/seance.dart';
@@ -100,7 +102,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                   if (snapshot.data!.isEmpty) {
                     return Center(
                       child: Text(
-                        "No sessions found",
+                        'No sessions found',
                         style: ThemeTextStyles.bodyMedium,
                       ),
                     );
@@ -109,9 +111,9 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                   final seancesForDate = snapshot.data!
                       .where(
                         (seance) =>
-                            seance.date.year == _selectedDate.year &&
-                            seance.date.month == _selectedDate.month &&
-                            seance.date.day == _selectedDate.day,
+                            seance.date?.year == _selectedDate.year &&
+                            seance.date?.month == _selectedDate.month &&
+                            seance.date?.day == _selectedDate.day,
                       )
                       .toList();
 
@@ -183,16 +185,130 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
     );
   }
   Widget _buildSeanceCard(Seance seance) {
+    final isOngoing = _isSeanceOngoing(seance);
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        title: Text(seance.classe, style: ThemeTextStyles.cardTitle),
-        subtitle: Text(
-          '${seance.heureDebut} - ${seance.heureFin}',
-          style: ThemeTextStyles.bodyMedium,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: isOngoing ? ThemeColors.primary : Colors.grey[400]!,
+              width: 4,
+            ),
+          ),
         ),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16)
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status badge and time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isOngoing
+                        ? ThemeColors.primary.withOpacity(0.2)
+                        : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isOngoing ? 'EN COURS' : 'À VENIR',
+                    style: ThemeTextStyles.bodySmall.copyWith(
+                      color: isOngoing ? ThemeColors.primary : Colors.grey[600],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${seance.heureDebut} — ${seance.heureFin}',
+                  style: ThemeTextStyles.headlineMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Course title
+            Text(
+              seance.matiere ?? 'Not found',
+              style: ThemeTextStyles.headlineLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Class and location info
+            Row(
+              children: [
+                Icon(Icons.people, size: 18, color: ThemeColors.textSecondary),
+                const SizedBox(width: 8),
+                Text(
+                  seance.classe ?? 'Not found',
+                  style: ThemeTextStyles.bodyMedium.copyWith(
+                    color: ThemeColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            isOngoing?
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ThemeColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AppelScreen(
+                        userId: widget.userId,
+                        name: widget.name,
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Faire l\'appel',
+                  style: ThemeTextStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ):Container(),
+          ],
+        ),
       ),
+    );
+  }
+  
+  bool _isSeanceOngoing(Seance seance) {
+    if (seance.heureDebut == null || seance.heureFin == null) return false;
+    
+    final now = TimeOfDay.now();
+    final startTime = _parseTime(seance.heureDebut!);
+    final endTime = _parseTime(seance.heureFin!);
+    
+    return now.hour > startTime.hour ||
+        (now.hour == startTime.hour && now.minute >= startTime.minute) &&
+        (now.hour < endTime.hour ||
+            (now.hour == endTime.hour && now.minute < endTime.minute));
+  }
+  
+  TimeOfDay _parseTime(String timeString) {
+    final parts = timeString.split(':');
+    return TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
     );
   }
 

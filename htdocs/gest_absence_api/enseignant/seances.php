@@ -11,12 +11,15 @@ if ($_SERVER['REQUEST_METHOD'] != 'GET') {
 }
 include_once '../config/database.php';
 $data = json_decode(file_get_contents("php://input"));
-//input here (seanceid:1,listabsence:[1,"present"])
 $response = array();
-$sql="SELECT * FROM `seances`";
+$sql="SELECT `seances`.*, `classes`.`nom` as `classe_nom`, `matieres`.`nom` as `matiere_nom` FROM `seances` join `classes` on `seances`.`classe_id` = `classes`.`id` join `matieres` on `seances`.`matiere_id` = `matieres`.`id` WHERE 1";
 if (isset($_GET["id"])){
     $id=$_GET["id"];
-    $sql=$sql."WHERE id=$id";
+    $sql=$sql." and seances.id=$id"; 
+    }
+if (isset($_GET["enseignant_id"])){
+    $eid=$_GET["enseignant_id"];
+    $sql=$sql." and seances.enseignant_id=$eid";
 }
 $result= $db->query($sql.";");
 if ($result->num_rows>0){

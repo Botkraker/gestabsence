@@ -7,10 +7,10 @@ import 'package:gestabsence/services/api_service.dart';
 class AbsenceService {
   static Future<bool> recordAbsences({
     required int seanceId,
-    required List<Map<String, dynamic>> listAbsence,
+    required List<List<dynamic>> listAbsence,
   }) async {
     final response = await ApiService.post('/enseignant/absences.php', {
-      'seance_id': seanceId,
+      'seanceid': seanceId,
       'listabsence': listAbsence,
     });
 

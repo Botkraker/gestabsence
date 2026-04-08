@@ -279,10 +279,11 @@ Future<void> testAbsenceService() async {
     final result = await AbsenceService.recordAbsences(
       seanceId: 1,
       listAbsence: [
-        {'student_id': 1, 'status': 'absent'},
-        {'student_id': 2, 'status': 'present'},
+        [1,'absent'],
+        [2,'present'],
       ],
     );
+
     print('  ✓ recordAbsences(): ${result ? '✅ Recorded' : '❌ Failed'}');
   } catch (e) {
     print('  ❌ recordAbsences() Error: $e');

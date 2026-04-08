@@ -53,7 +53,7 @@ class SessionService {
     });
   }
 
-  static Future<List<Seance>> getTeacherSessions(int teacherId) async {
+  static Future<List<Seance>>   getTeacherSessions(int teacherId) async {
     final response = await ApiService.get('/enseignant/seances.php?enseignant_id=$teacherId');
     if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
@@ -74,8 +74,9 @@ class SessionService {
     final response = await ApiService.get(
       '/enseignant/seances.php?enseignant_id=$teacherId&id=$sessionId',
     );
-    if (response['success'] == 1 && response['data'] is Map) {
-      var data = response['data'] as Map<String, dynamic>;
+    if (response['success'] == 1 && response['data'] is List) {
+    print("IMMM HEEEERREEEE");  
+      var data = response['data'].first as Map<String, dynamic>;
       return Seance(
         id: int.parse(data['id'].toString()),
         classe: data['classe_nom'] as String?,
