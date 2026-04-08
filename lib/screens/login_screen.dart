@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:gestabsence/services/auth_service.dart';
 import 'admin/admin_home.dart';
 import 'enseignant/enseignant_home.dart';
 import 'etudiant/etudiant_home.dart';
@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
 			return;
 		}
 
-		final response = await ApiService.login(email, password);
+		final response = await AuthService.login(email, password);
 
 		if (!mounted) return;
 

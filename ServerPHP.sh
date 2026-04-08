@@ -1,2 +1,2 @@
-cd ./htdocs/gest_absence_api
+cd ./htdocs
 php -S localhost:8067

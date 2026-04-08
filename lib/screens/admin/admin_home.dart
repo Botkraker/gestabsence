@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestabsence/services/api_service.dart';
+import 'package:gestabsence/services/class_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
 class AdminHome extends StatelessWidget {
@@ -48,7 +48,7 @@ class AdminHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 FutureBuilder<Map<String, dynamic>>(
-                  future: ApiService.getAdminStudentStats(),
+                  future: ClassService.getAdminStats(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const SizedBox(

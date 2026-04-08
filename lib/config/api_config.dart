@@ -1,5 +1,5 @@
 // On this setup, the PHP server listens on localhost:8067.
-const String baseUrl = 'http://localhost:8067';
+const String baseUrl = 'http://localhost:8067/gest_absence_api';
 
 /*
 =============================================================================

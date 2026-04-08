@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/main.dart';
 import 'package:gestabsence/themeapp.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/screens/enseignant/mes_seances_screen.dart';
@@ -31,7 +32,7 @@ class _EnseignantHomeState extends State<EnseignantHome> {
                 icon: const Icon(Icons.arrow_back),
               ),
               const SizedBox(width: 25),
-              Text('DASHBOARD', style: ThemeTextStyles.headlineSmall),
+              Text('DASHBOARD', style: ThemeTextStyles.headlineLarge),
             ],
           ),
         ),
@@ -39,22 +40,28 @@ class _EnseignantHomeState extends State<EnseignantHome> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: IconButton(
-              icon: const Icon(Icons.notifications, size: 28),
+              icon: const Icon(Icons.logout_outlined, size: 28),
               color: ThemeColors.textSecondary,
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp()),
+                  (route) => false,
+                );
+              },
             ),
           ),
         ],
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Welcome, Dr.${widget.name}',
-                style: ThemeTextStyles.display,
+                style: ThemeTextStyles.headlineMedium,
                 textAlign: TextAlign.left,
               ),
               const SizedBox(height: 24),
@@ -86,7 +93,12 @@ class _EnseignantHomeState extends State<EnseignantHome> {
             case 1:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) =>  MesSeancesScreen(userId: widget.userId, name: widget.name)),
+                MaterialPageRoute(
+                  builder: (_) => MesSeancesScreen(
+                    userId: widget.userId,
+                    name: widget.name,
+                  ),
+                ),
               );
               break;
             case 2:

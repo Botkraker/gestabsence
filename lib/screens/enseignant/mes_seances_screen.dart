@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/main.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/screens/enseignant/enseignant_home.dart';
 import 'package:gestabsence/themeapp.dart';
@@ -15,6 +16,14 @@ class MesSeancesScreen extends StatefulWidget {
 
 class _MesSeancesScreenState extends State<MesSeancesScreen> {
   int _currentIndex = 1;
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = DateTime.now();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +40,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                 icon: const Icon(Icons.arrow_back),
               ),
               const SizedBox(width: 25),
-              Text('DASHBOARD', style: ThemeTextStyles.headlineSmall),
+              Text('Mes Séances', style: ThemeTextStyles.headlineLarge),
             ],
           ),
         ),
@@ -39,9 +48,15 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: IconButton(
-              icon: const Icon(Icons.notifications, size: 28),
+              icon: const Icon(Icons.logout_outlined, size: 28),
               color: ThemeColors.textSecondary,
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp()),
+                  (route) => false,
+                );
+              },
             ),
           ),
         ],
@@ -53,11 +68,19 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Welcome, Dr.${widget.name},this page is Mes Seances Screen',
+                'Today, you have 3 sessions scheduled.',
                 style: ThemeTextStyles.display,
                 textAlign: TextAlign.left,
               ),
               const SizedBox(height: 24),
+              // here i want to add  todays date
+              Text(
+                'Monday, 10 April 2024',
+                style: ThemeTextStyles.headlineMedium,
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 24),
+              _buildDateRangeSelector(),
             ],
           ),
         ),
@@ -72,13 +95,19 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
             case 0:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => EnseignantHome(userId: widget.userId, name: widget.name)),
+                MaterialPageRoute(
+                  builder: (_) =>
+                      EnseignantHome(userId: widget.userId, name: widget.name),
+                ),
               );
               break;
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) =>  AppelScreen(userId: widget.userId, name: widget.name)),
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AppelScreen(userId: widget.userId, name: widget.name),
+                ),
               );
               break;
             default:
@@ -100,6 +129,87 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
         ],
         backgroundColor: ThemeColors.borderSubtle,
         elevation: 0,
+      ),
+    );
+  }
+
+  Widget _buildDateRangeSelector() {
+    final today = DateTime.now();
+    final dates = <DateTime>[];
+    int offset = -1;
+    while (dates.length < 5) {
+      final date = today.add(Duration(days: offset));
+      if (date.weekday != 7) {
+        dates.add(date);
+      }
+      offset++;
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: dates.map((date) {
+          final isSelected =
+              date.year == _selectedDate.year &&
+              date.month == _selectedDate.month &&
+              date.day == _selectedDate.day;
+
+          final dayNames = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
+          final dayName = dayNames[date.weekday-1];
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedDate = date;
+              });
+            },
+            child: Container(
+              width: 100,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? ThemeColors.primary
+                    : ThemeColors.borderSubtle,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    dayName,
+                    style: ThemeTextStyles.bodySmall.copyWith(
+                      color: isSelected
+                          ? Colors.white
+                          : ThemeColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${date.day}',
+                    style: ThemeTextStyles.headlineLarge.copyWith(
+                      color: isSelected
+                          ? Colors.white
+                          : ThemeColors.textPrimary,
+                    ),
+                  ),
+                  if (isSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

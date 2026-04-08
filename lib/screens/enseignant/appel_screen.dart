@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/main.dart';
 import 'package:gestabsence/screens/enseignant/enseignant_home.dart';
 import 'package:gestabsence/screens/enseignant/mes_seances_screen.dart';
 import 'package:gestabsence/themeapp.dart';
@@ -14,7 +15,6 @@ class AppelScreen extends StatefulWidget {
 
 class _AppelScreenState extends State<AppelScreen> {
   int _currentIndex = 2;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +31,7 @@ class _AppelScreenState extends State<AppelScreen> {
                 icon: const Icon(Icons.arrow_back),
               ),
               const SizedBox(width: 25),
-              Text('DASHBOARD', style: ThemeTextStyles.headlineSmall),
+              Text('Appel', style: ThemeTextStyles.headlineLarge),
             ],
           ),
         ),
@@ -39,9 +39,15 @@ class _AppelScreenState extends State<AppelScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: IconButton(
-              icon: const Icon(Icons.notifications, size: 28),
+              icon: const Icon(Icons.logout_outlined, size: 28),
               color: ThemeColors.textSecondary,
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp()),
+                  (route) => false,
+                );
+              },
             ),
           ),
         ],
@@ -103,4 +109,6 @@ class _AppelScreenState extends State<AppelScreen> {
       ),
     );
   }
+
+ 
 }
