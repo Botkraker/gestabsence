@@ -4,9 +4,16 @@ import 'package:gestabsence/services/api_service.dart';
 class SessionService {
   static Future<List<Seance>> getAllSessions() async {
     final response = await ApiService.get('/admin/seances.php');
-    if (response['success'] == true && response['data'] is List) {
+    if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Seance(id: data['id'], classe: data['classe_nom'], matiere: data['matiere_nom'], date: data['date_seance'], heureDebut: data['heure_debut'], heureFin: data['heure_fin']))
+          .map((data) => Seance(
+            id: int.parse(data['id'].toString()),
+            classe: data['classe_nom'] as String?,
+            matiere: data['matiere_nom'] as String?,
+            date: DateTime.tryParse(data['date_seance'] ?? ''),
+            heureDebut: data['heure_debut'] as String?,
+            heureFin: data['heure_fin'] as String?,
+          ))
           .toList();
     }
     return [];
@@ -14,10 +21,16 @@ class SessionService {
 
   static Future<Seance?> getSession(int id) async {
     final response = await ApiService.get('/admin/seances.php?id=$id');
-    if (response['success'] == true && response['data'] is Map) {
-      var data= response['data'] as Map<String, dynamic>;
-
-      return Seance(id: data['id'], classe: data['classe_nom'], matiere: data['matiere_nom'], date: data['date_seance'], heureDebut: data['heure_debut'], heureFin: data['heure_fin']);
+    if (response['success'] == 1 && response['data'] is Map) {
+      var data = response['data'] as Map<String, dynamic>;
+      return Seance(
+        id: data['id'] as int?,
+        classe: data['classe_nom'] as String?,
+        matiere: data['matiere_nom'] as String?,
+        date: DateTime.tryParse(data['date_seance'] ?? ''),
+        heureDebut: data['heure_debut'] as String?,
+        heureFin: data['heure_fin'] as String?,
+      );
     }
     return null;
   }
@@ -42,9 +55,16 @@ class SessionService {
 
   static Future<List<Seance>> getTeacherSessions(int teacherId) async {
     final response = await ApiService.get('/enseignant/seances.php?enseignant_id=$teacherId');
-    if (response['success'] == true && response['data'] is List) {
+    if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Seance(id: data['id'], classe: data['classe_nom'], matiere: data['matiere_nom'], date: data['date_seance'], heureDebut: data['heure_debut'], heureFin: data['heure_fin']))
+          .map((data) => Seance(
+            id: int.parse(data['id'].toString()),
+            classe: data['classe_nom'] as String?,
+            matiere: data['matiere_nom'] as String?,
+            date: DateTime.tryParse(data['date_seance'] ?? ''),
+            heureDebut: data['heure_debut'] as String?,
+            heureFin: data['heure_fin'] as String?,
+          ))
           .toList();
     }
     return [];
@@ -54,9 +74,16 @@ class SessionService {
     final response = await ApiService.get(
       '/enseignant/seances.php?enseignant_id=$teacherId&id=$sessionId',
     );
-    if (response['success'] == true && response['data'] is Map) {
-      var data= response['data'] as Map<String, dynamic>;
-      return Seance(id: data['id'], classe: data['classe_nom'], matiere: data['matiere_nom'], date: data['date_seance'], heureDebut: data['heure_debut'], heureFin: data['heure_fin']);
+    if (response['success'] == 1 && response['data'] is Map) {
+      var data = response['data'] as Map<String, dynamic>;
+      return Seance(
+        id: int.parse(data['id'].toString()),
+        classe: data['classe_nom'] as String?,
+        matiere: data['matiere_nom'] as String?,
+        date: DateTime.tryParse(data['date_seance'] ?? ''),
+        heureDebut: data['heure_debut'] as String?,
+        heureFin: data['heure_fin'] as String?,
+      );
     }
     return null;
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gestabsence/main.dart';
+import 'package:gestabsence/models/seance.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/screens/enseignant/enseignant_home.dart';
+import 'package:gestabsence/services/session_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
 class MesSeancesScreen extends StatefulWidget {
@@ -73,14 +75,62 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                 textAlign: TextAlign.left,
               ),
               const SizedBox(height: 24),
-              // here i want to add  todays date
               Text(
-                'Monday, 10 April 2024',
+                DateTime.now().toLocal().toString().split(' ')[0],
                 style: ThemeTextStyles.headlineMedium,
                 textAlign: TextAlign.left,
               ),
               const SizedBox(height: 24),
               _buildDateRangeSelector(),
+              const SizedBox(height: 24),
+              FutureBuilder<List<Seance>>(
+                future: SessionService.getTeacherSessions(widget.userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if(snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        snapshot.error.toString(),
+                        style: ThemeTextStyles.bodyMedium,
+                      ),
+                    );
+                  } 
+                  if (snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "No sessions found",
+                        style: ThemeTextStyles.bodyMedium,
+                      ),
+                    );
+                  }
+
+                  final seancesForDate = snapshot.data!
+                      .where(
+                        (seance) =>
+                            seance.date.year == _selectedDate.year &&
+                            seance.date.month == _selectedDate.month &&
+                            seance.date.day == _selectedDate.day,
+                      )
+                      .toList();
+
+                  if (seancesForDate.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No sessions for this date',
+                        style: ThemeTextStyles.bodyMedium,
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: seancesForDate
+                        .map((seance) => _buildSeanceCard(seance))
+                        .toList(),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -132,6 +182,19 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
       ),
     );
   }
+  Widget _buildSeanceCard(Seance seance) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        title: Text(seance.classe, style: ThemeTextStyles.cardTitle),
+        subtitle: Text(
+          '${seance.heureDebut} - ${seance.heureFin}',
+          style: ThemeTextStyles.bodyMedium,
+        ),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16)
+      ),
+    );
+  }
 
   Widget _buildDateRangeSelector() {
     final today = DateTime.now();
@@ -155,7 +218,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
               date.day == _selectedDate.day;
 
           final dayNames = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
-          final dayName = dayNames[date.weekday-1];
+          final dayName = dayNames[date.weekday - 1];
 
           return GestureDetector(
             onTap: () {

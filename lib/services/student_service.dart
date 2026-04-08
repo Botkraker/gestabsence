@@ -5,12 +5,12 @@ import 'package:gestabsence/services/api_service.dart';
 class StudentService {
   static Future<List<Etudiant>> getAllStudents() async {
     final response = await ApiService.get('/admin/etudiants.php');
-    if (response['success'] == true && response['data'] is List) {
+    if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
           .map((data) => Etudiant(
-                id: data['etudiant_id'],
+                id: int.parse(data['etudiant_id'].toString()),
                 utilisateur: Utilisateur(
-                  id: data['utilisateur_id'],
+                  id: int.parse(data['utilisateur_id'].toString()),
                   nom: data['nom'],
                   prenom: data['prenom'],
                   email: data['email'],
@@ -25,7 +25,7 @@ class StudentService {
 
   static Future<Etudiant?> getStudent(int id) async {
     final response = await ApiService.get('/admin/etudiants.php?id=$id');
-    if (response['success'] == true && response['data'] is Map) {
+    if (response['success'] == 1 && response['data'] is Map) {
       var data= response['data'] as Map<String, dynamic>;
       return Etudiant(
                 id: data['etudiant_id'],

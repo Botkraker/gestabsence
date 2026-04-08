@@ -13,7 +13,7 @@ class ApiService {
       );
       return _handleResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'GET Error: $e'};
+      return {'success': 0, 'message': 'GET Error: $e'};
     }
   }
 
@@ -29,7 +29,7 @@ class ApiService {
       );
       return _handleResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'POST Error: $e'};
+      return {'success': 0, 'message': 'POST Error: $e'};
     }
   }
 
@@ -45,7 +45,7 @@ class ApiService {
       );
       return _handleResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'PUT Error: $e'};
+      return {'success': 0, 'message': 'PUT Error: $e'};
     }
   }
 
@@ -60,7 +60,7 @@ class ApiService {
     } catch (e) {
       return {
         'statusCode': response.statusCode,
-        'success': false,
+        'success': 0,
         'message': 'Failed to parse response: $e',
         'body': response.body,
       };

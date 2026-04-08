@@ -1,16 +1,16 @@
 class Seance {
-    final int id;
-    final String classe;
-    final String matiere;
-    final DateTime date;
-    final String heureDebut;
-    final String heureFin;
+    int? id;
+    String? classe;
+    String? matiere;
+    DateTime? date;
+    String? heureDebut;
+    String? heureFin;
     Seance({
-        required this.id,
-        required this.classe,
-        required this.matiere,
-        required this.date,
-        required this.heureDebut,
-        required this.heureFin,
+        this.id,
+        this.classe,
+        this.matiere,
+        this.date,
+        this.heureDebut,
+        this.heureFin,
     });
 }

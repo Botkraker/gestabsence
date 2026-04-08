@@ -1,4 +1,7 @@
 import 'package:gestabsence/models/absence.dart';
+import 'package:gestabsence/models/etudiant.dart';
+import 'package:gestabsence/models/seance.dart';
+import 'package:gestabsence/models/utilisateur.dart';
 import 'package:gestabsence/services/api_service.dart';
 
 class AbsenceService {
@@ -15,9 +18,20 @@ class AbsenceService {
   }
     static Future<List<Absence>> getStudentAbsences(int studentId) async {
     final response = await ApiService.get('/etudiant/absences.php?id=$studentId');
-    if (response['success'] == true && response['data'] is List) {
+    if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Absence( seance: data['seance'], studentName: data['studentName'], status: data['status']))
+          .map((data) => Absence(
+            seance: Seance(
+              date: DateTime.tryParse(data['date_seance']),
+              heureDebut: data['heure_debut']?.toString(),
+              heureFin: data['heure_fin']?.toString(),
+            ),
+            studentName: Etudiant(
+              id: studentId,
+              utilisateur: Utilisateur(nom: data["nom"]),
+            ),
+            status: data['statut'],
+          ))
           .toList();
     }
     return [];
