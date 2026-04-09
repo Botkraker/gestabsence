@@ -31,10 +31,29 @@ void main() async {
 Future<void> testAuthService() async {
   print('📋 Testing AuthService...');
   try {
-    final result = await AuthService.login('prof', 'prof123');
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final email = 'auth_test_$now@example.com';
+    const password = 'testpass123';
+
+    final created = await TeacherService.createTeacher(
+      nom: 'Auth',
+      prenom: 'Tester',
+      email: email,
+      password: password,
+      specialite: 'Testing',
+    );
+
+    if (created['success'] != 1) {
+      print('  ✓ login(): ❌ FAILED');
+      print('    Message: Could not prepare test user: ${created['message']}');
+      print('');
+      return;
+    }
+
+    final result = await AuthService.login(email, password);
     print('  ✓ login(): ${result['success'] == 1 ? '✅ SUCCESS' : '❌ FAILED'}');
-    if (result['data'] != null) {
-      print('    Data: ${result['data']}');
+    if (result['user'] != null) {
+      print('    User: ${result['user']}');
     } else {
       print('    Message: ${result['message']}');
     }
@@ -172,7 +191,7 @@ Future<void> testSessionService() async {
     final session = await SessionService.getSession(1);
     print('  ✓ getSession(1): ${session != null ? '✅ Found' : '❌ Not found'}');
     if (session != null) {
-      print('    Session: ${session.matiere} on ${session.date}');
+      print('    Session: ${session.matiere ?? 'N/A'} on ${session.date?.toIso8601String() ?? 'N/A'}');
     }
   } catch (e) {
     print('  ❌ getSession() Error: $e');
@@ -190,9 +209,19 @@ Future<void> testSessionService() async {
   }
 
   try {
-    // Test getTeacherSession
-    final session = await SessionService.getTeacherSession(1, 1);
-    print('  ✓ getTeacherSession(1, 1): ${session != null ? '✅ Found' : '❌ Not found'}');
+    // Test getTeacherSession with a real session ID belonging to teacher 1
+    final teacherSessions = await SessionService.getTeacherSessions(1);
+    if (teacherSessions.isEmpty) {
+      print('  ✓ getTeacherSession(dynamic): ❌ No sessions found for teacher 1');
+    } else {
+      final sessionId = teacherSessions.first.id;
+      if (sessionId == null) {
+        print('  ✓ getTeacherSession(dynamic): ❌ Session id is null');
+      } else {
+        final session = await SessionService.getTeacherSession(1, sessionId);
+        print('  ✓ getTeacherSession(1, $sessionId): ${session != null ? '✅ Found' : '❌ Not found'}');
+      }
+    }
   } catch (e) {
     print('  ❌ getTeacherSession() Error: $e');
   }
@@ -204,8 +233,8 @@ Future<void> testSessionService() async {
       classeId: 1,
       matiereId: 1,
       dateSeance: '2026-04-15',
-      heureDebut: '09:00',
-      heureFin: '10:30',
+      heureDebut: '09:00:00',
+      heureFin: '10:30:00',
     );
     print('  ✓ createSession(): ${result['success'] == 1 ? '✅ Created' : '❌ Failed'}');
     if (result['message'] != null) {
@@ -275,16 +304,34 @@ Future<void> testAbsenceService() async {
   print('📝 Testing AbsenceService...');
 
   try {
-    // Test recordAbsences
-    final result = await AbsenceService.recordAbsences(
-      seanceId: 1,
-      listAbsence: [
-        [1,'absent'],
-        [2,'present'],
-      ],
-    );
+    // Test recordAbsences with a real session and real students
+    final sessions = await SessionService.getAllSessions();
+    final students = await StudentService.getAllStudents();
 
-    print('  ✓ recordAbsences(): ${result ? '✅ Recorded' : '❌ Failed'}');
+    if (sessions.isEmpty || students.isEmpty) {
+      print('  ✓ recordAbsences(): ❌ Missing sessions or students for test');
+    } else {
+      final seanceId = sessions.first.id;
+      if (seanceId == null) {
+        print('  ✓ recordAbsences(): ❌ Selected session has null id');
+      } else {
+        final selected = students.take(2).toList();
+        final payload = <List<dynamic>>[];
+
+        for (var i = 0; i < selected.length; i++) {
+          payload.add([selected[i].id, i.isEven ? 'absent' : 'present']);
+        }
+
+        final result = await AbsenceService.recordAbsences(
+          seanceId: seanceId,
+          listAbsence: payload,
+        );
+
+        print('  ✓ recordAbsences(): ${result['success'] == 1 ? '✅ Recorded' : '❌ Failed'}');
+        print('    Message: ${result['message'] ?? 'No message'}');
+        print('    Payload: seanceId=$seanceId, listAbsence=$payload');
+      }
+    }
   } catch (e) {
     print('  ❌ recordAbsences() Error: $e');
   }

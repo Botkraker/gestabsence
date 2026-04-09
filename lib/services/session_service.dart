@@ -6,14 +6,8 @@ class SessionService {
     final response = await ApiService.get('/admin/seances.php');
     if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Seance(
-            id: int.parse(data['id'].toString()),
-            classe: data['classe_nom'] as String?,
-            matiere: data['matiere_nom'] as String?,
-            date: DateTime.tryParse(data['date_seance'] ?? ''),
-            heureDebut: data['heure_debut'] as String?,
-            heureFin: data['heure_fin'] as String?,
-          ))
+          .whereType<Map<String, dynamic>>()
+          .map(Seance.fromJson)
           .toList();
     }
     return [];
@@ -22,15 +16,7 @@ class SessionService {
   static Future<Seance?> getSession(int id) async {
     final response = await ApiService.get('/admin/seances.php?id=$id');
     if (response['success'] == 1 && response['data'] is Map) {
-      var data = response['data'] as Map<String, dynamic>;
-      return Seance(
-        id: data['id'] as int?,
-        classe: data['classe_nom'] as String?,
-        matiere: data['matiere_nom'] as String?,
-        date: DateTime.tryParse(data['date_seance'] ?? ''),
-        heureDebut: data['heure_debut'] as String?,
-        heureFin: data['heure_fin'] as String?,
-      );
+      return Seance.fromJson(response['data'] as Map<String, dynamic>);
     }
     return null;
   }
@@ -53,18 +39,12 @@ class SessionService {
     });
   }
 
-  static Future<List<Seance>>   getTeacherSessions(int teacherId) async {
+  static Future<List<Seance>> getTeacherSessions(int teacherId) async {
     final response = await ApiService.get('/enseignant/seances.php?enseignant_id=$teacherId');
     if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Seance(
-            id: int.parse(data['id'].toString()),
-            classe: data['classe_nom'] as String?,
-            matiere: data['matiere_nom'] as String?,
-            date: DateTime.tryParse(data['date_seance'] ?? ''),
-            heureDebut: data['heure_debut'] as String?,
-            heureFin: data['heure_fin'] as String?,
-          ))
+          .whereType<Map<String, dynamic>>()
+          .map(Seance.fromJson)
           .toList();
     }
     return [];
@@ -75,16 +55,8 @@ class SessionService {
       '/enseignant/seances.php?enseignant_id=$teacherId&id=$sessionId',
     );
     if (response['success'] == 1 && response['data'] is List) {
-    print("IMMM HEEEERREEEE");  
       var data = response['data'].first as Map<String, dynamic>;
-      return Seance(
-        id: int.parse(data['id'].toString()),
-        classe: data['classe_nom'] as String?,
-        matiere: data['matiere_nom'] as String?,
-        date: DateTime.tryParse(data['date_seance'] ?? ''),
-        heureDebut: data['heure_debut'] as String?,
-        heureFin: data['heure_fin'] as String?,
-      );
+      return Seance.fromJson(data);
     }
     return null;
   }
