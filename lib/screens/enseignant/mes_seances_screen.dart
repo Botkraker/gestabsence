@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:gestabsence/main.dart';
 import 'package:gestabsence/models/seance.dart';
@@ -211,7 +209,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: isOngoing
-                        ? ThemeColors.primary.withOpacity(0.2)
+                        ? ThemeColors.primary.withValues(alpha: 0.2)
                         : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -254,7 +252,8 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            isOngoing?
+            isOngoing || seance.id != null
+                ?
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -272,19 +271,21 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
                       builder: (_) => AppelScreen(
                         userId: widget.userId,
                         name: widget.name,
+                        seance: seance,
                       ),
                     ),
                   );
                 },
                 child: Text(
-                  'Faire l\'appel',
+                  'Open attendance',
                   style: ThemeTextStyles.bodyMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ):Container(),
+            )
+                : Container(),
           ],
         ),
       ),

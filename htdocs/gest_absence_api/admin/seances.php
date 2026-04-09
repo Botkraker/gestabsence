@@ -2,6 +2,12 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(200);
+	exit();
+}
 
 include_once '../config/database.php';
 
@@ -45,12 +51,15 @@ if ($method === 'GET') {
 			   c.nom AS classe_nom,
 			   m.nom AS matiere_nom,
 			   u.nom AS enseignant_nom,
-			   u.prenom AS enseignant_prenom
+			   u.prenom AS enseignant_prenom,
+			   COUNT(a.id) AS absence_total,
+			   SUM(CASE WHEN a.statut = 'absent' THEN 1 ELSE 0 END) AS absent_count
 		FROM seances s
 		INNER JOIN classes c ON c.id = s.classe_id
 		INNER JOIN matieres m ON m.id = s.matiere_id
 		INNER JOIN enseignants e ON e.id = s.enseignant_id
 		INNER JOIN utilisateurs u ON u.id = e.utilisateur_id
+		LEFT JOIN absences a ON a.seance_id = s.id
 	";
 
 	if (isset($_GET['id'])) {
@@ -67,7 +76,7 @@ if ($method === 'GET') {
 		respond(200, true, "Session fetched", $result->fetch_assoc());
 	}
 
-	$result = $db->query($baseSql . " ORDER BY s.id DESC");
+	$result = $db->query($baseSql . " GROUP BY s.id, s.enseignant_id, s.classe_id, s.matiere_id, s.date_seance, s.heure_debut, s.heure_fin, c.nom, m.nom, u.nom, u.prenom ORDER BY s.date_seance DESC, s.heure_debut DESC");
 	$rows = array();
 
 	while ($row = $result->fetch_assoc()) {
