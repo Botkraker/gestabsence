@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestabsence/main.dart';
 import 'package:gestabsence/models/seance.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
-import 'package:gestabsence/screens/enseignant/enseignant_home.dart';
 import 'package:gestabsence/services/session_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
@@ -17,7 +15,6 @@ class MesSeancesScreen extends StatefulWidget {
 }
 
 class _MesSeancesScreenState extends State<MesSeancesScreen> {
-  int _currentIndex = 1;
   late DateTime _selectedDate;
 
   @override
@@ -28,42 +25,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leadingWidth: 160,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const SizedBox(width: 25),
-              Text('Mes Séances', style: ThemeTextStyles.headlineLarge),
-            ],
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: IconButton(
-              icon: const Icon(Icons.logout_outlined, size: 28),
-              color: ThemeColors.textSecondary,
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MyApp()),
-                  (route) => false,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
+    return SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Column(
@@ -134,53 +96,7 @@ class _MesSeancesScreenState extends State<MesSeancesScreen> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          switch (index) {
-            case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      EnseignantHome(userId: widget.userId, name: widget.name),
-                ),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      AppelScreen(userId: widget.userId, name: widget.name),
-                ),
-              );
-              break;
-            default:
-          }
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Dashboard",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: "Seances",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fact_check_outlined),
-            label: "Appel",
-          ),
-        ],
-        backgroundColor: ThemeColors.borderSubtle,
-        elevation: 0,
-      ),
-    );
+      );
   }
   Widget _buildSeanceCard(Seance seance) {
     final isOngoing = _isSeanceOngoing(seance);

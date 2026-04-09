@@ -1,5 +1,4 @@
 import 'package:gestabsence/models/etudiant.dart';
-import 'package:gestabsence/models/utilisateur.dart';
 import 'package:gestabsence/services/api_service.dart';
 
 class StudentService {
@@ -7,17 +6,7 @@ class StudentService {
     final response = await ApiService.get('/admin/etudiants.php');
     if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Etudiant(
-                id: int.parse(data['etudiant_id'].toString()),
-                utilisateur: Utilisateur(
-                  id: int.parse(data['utilisateur_id'].toString()),
-                  nom: data['nom'],
-                  prenom: data['prenom'],
-                  email: data['email'],
-                  role: data['role'],
-                ),
-                classe: data['classe_nom'],
-              ))
+          .map((data) => Etudiant.fromJson(data as Map<String, dynamic>))
           .toList();
     }
     return [];
@@ -26,18 +15,7 @@ class StudentService {
   static Future<Etudiant?> getStudent(int id) async {
     final response = await ApiService.get('/admin/etudiants.php?id=$id');
     if (response['success'] == 1 && response['data'] is Map) {
-      var data= response['data'] as Map<String, dynamic>;
-      return Etudiant(
-                id: data['etudiant_id'],
-                utilisateur: Utilisateur(
-                  id: data['utilisateur_id'],
-                  nom: data['nom'],
-                  prenom: data['prenom'],
-                  email: data['email'],
-                  role: data['role'],
-                ),
-                classe: data['classe_nom'],
-              );
+      return Etudiant.fromJson(response['data'] as Map<String, dynamic>);
     }
     return null;
   }
@@ -60,7 +38,19 @@ class StudentService {
 
 
 
-  static Future<Map<String, dynamic>> getStudentProfile(int studentId) async {
-    return ApiService.get('/etudiant/profil.php?id=$studentId');
+  static Future<Etudiant?> getStudentProfile(int studentId) async {
+    final response = await ApiService.get('/etudiant/profil.php?id=$studentId');
+    if (response['success'] == 1 && response['data'] is Map) {
+      return Etudiant.fromJson(response['data'] as Map<String, dynamic>);
+    }
+    return null;
+  }
+  static Future<Etudiant?> getStudentProfileByUserId(int userId) async {
+    final response = await ApiService.get('/etudiant/profil.php?utilisateur_id=$userId');
+    if (response['success'] == 1) {
+      var data= response['data'] as List;
+      return Etudiant.fromJson(data[0] as Map<String, dynamic>);
+    }
+    return null;
   }
 }

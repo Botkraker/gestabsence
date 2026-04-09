@@ -6,7 +6,7 @@ class TeacherService {
     final response = await ApiService.get('/admin/enseignants.php');
     if (response['success'] == 1 && response['data'] is List) {
       return (response['data'] as List)
-          .map((data) => Utilisateur(id: int.parse(data['utilisateur_id'].toString()), nom: data['nom'], prenom: data['prenom'], email: data['email'], role: 'enseignant'))
+          .map((data) => Utilisateur.fromJson(data as Map<String, dynamic>))
           .toList();
     }
     return [];
@@ -15,8 +15,7 @@ class TeacherService {
   static Future<Utilisateur?> getTeacher(int id) async {
     final response = await ApiService.get('/admin/enseignants.php?id=$id');
     if (response['success'] == 1 && response['data'] is Map) {
-      var data= response['data'] as Map<String, dynamic>;
-      return Utilisateur(id: int.parse(data['utilisateur_id'].toString()), nom: data['nom'], prenom: data['prenom'], email: data['email'], role: 'enseignant');
+      return Utilisateur.fromJson(response['data'] as Map<String, dynamic>);
     }
     return null;
   }

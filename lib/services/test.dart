@@ -116,14 +116,14 @@ Future<void> testStudentService() async {
   try {
     // Test getStudentProfile
     final profile = await StudentService.getStudentProfile(1);
-    print('  ✓ getStudentProfile(1): ${profile['success'] == 1 ? '✅ Retrieved' : '❌ Failed'}');
-    if (profile['data'] != null) {
-      print('    Data: ${profile['data']}');
+    print('  ✓ getStudentProfile(1): ${profile != null ? '✅ Retrieved' : '❌ Failed'}');
+    if (profile != null) {
+      print('    Data: ${profile}');
     }
   } catch (e) {
     print('  ❌ getStudentProfile() Error: $e');
   }
-
+  
   print('');
 }
 

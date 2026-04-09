@@ -15,24 +15,16 @@ class EnseignantHome extends StatefulWidget {
 
 class _EnseignantHomeState extends State<EnseignantHome> {
   int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 160,
+        leadingWidth: 300,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
           child: Row(
             children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const SizedBox(width: 25),
-              Text('DASHBOARD', style: ThemeTextStyles.headlineLarge),
+              Text(["Dashboard","Sceances","Appel"][_currentIndex], style: ThemeTextStyles.headlineLarge),
             ],
           ),
         ),
@@ -53,65 +45,13 @@ class _EnseignantHomeState extends State<EnseignantHome> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Welcome, Dr.${widget.name}',
-                style: ThemeTextStyles.headlineMedium,
-                textAlign: TextAlign.left,
-              ),
-              const SizedBox(height: 24),
-              _buildStatCard(
-                title: 'Total étudiants',
-                value: '124',
-                height: 150,
-              ),
-              const SizedBox(height: 16),
-              _buildStatCard(title: 'Présence Moy', value: '85%', height: 150),
-              const SizedBox(height: 16),
-              _buildStatCard(
-                title: 'Prochaine séance',
-                value: 'Math 101 - 08:30, Salle B2',
-                subtitle: 'La séance la plus proche est dans 45 minutes.',
-                height: 170,
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
-          switch (index) {
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MesSeancesScreen(
-                    userId: widget.userId,
-                    name: widget.name,
-                  ),
-                ),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      AppelScreen(userId: widget.userId, name: widget.name),
-                ),
-              );
-              break;
-            default:
-          }
         },
         items: [
           BottomNavigationBarItem(
@@ -129,6 +69,59 @@ class _EnseignantHomeState extends State<EnseignantHome> {
         ],
         backgroundColor: ThemeColors.borderSubtle,
         elevation: 0,
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildDashboard();
+      case 1:
+
+        return MesSeancesScreen(
+          userId: widget.userId,
+          name: widget.name,
+        );
+      case 2:
+        return AppelScreen(
+          userId: widget.userId,
+          name: widget.name,
+        );
+      default:
+        return _buildDashboard();
+    }
+  }
+
+  Widget _buildDashboard() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Welcome, Dr.${widget.name}',
+              style: ThemeTextStyles.headlineMedium,
+              textAlign: TextAlign.left,
+            ),
+            const SizedBox(height: 24),
+            _buildStatCard(
+              title: 'Total étudiants',
+              value: '124',
+              height: 150,
+            ),
+            const SizedBox(height: 16),
+            _buildStatCard(title: 'Présence Moy', value: '85%', height: 150),
+            const SizedBox(height: 16),
+            _buildStatCard(
+              title: 'Prochaine séance',
+              value: 'Math 101 - 08:30, Salle B2',
+              subtitle: 'La séance la plus proche est dans 45 minutes.',
+              height: 170,
+            ),
+          ],
+        ),
       ),
     );
   }

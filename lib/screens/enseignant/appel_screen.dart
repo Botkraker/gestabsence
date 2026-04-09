@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestabsence/main.dart';
 import 'package:gestabsence/models/etudiant.dart';
 import 'package:gestabsence/models/seance.dart';
-import 'package:gestabsence/screens/enseignant/enseignant_home.dart';
-import 'package:gestabsence/screens/enseignant/mes_seances_screen.dart';
 import 'package:gestabsence/services/absence_service.dart';
 import 'package:gestabsence/services/student_service.dart';
 import 'package:gestabsence/themeapp.dart';
@@ -27,7 +24,6 @@ class AppelScreen extends StatefulWidget {
 }
 
 class _AppelScreenState extends State<AppelScreen> {
-  int _currentIndex = 2;
   late Future<List<Etudiant>> _studentsFuture;
   final Map<int, bool> _presenceByStudentId = <int, bool>{};
   bool _isSaving = false;
@@ -124,99 +120,12 @@ class _AppelScreenState extends State<AppelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leadingWidth: 160,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const SizedBox(width: 25),
-              Text('Appel', style: ThemeTextStyles.headlineLarge),
-            ],
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: IconButton(
-              icon: const Icon(Icons.logout_outlined, size: 28),
-              color: ThemeColors.textSecondary,
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MyApp()),
-                  (route) => false,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      body: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: widget.seance == null
             ? _buildNoSeanceSelected()
             : _buildAttendanceForSeance(),
-      ),
-      bottomNavigationBar: widget.showNavigation
-          ? BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-                switch (index) {
-                  case 0:
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EnseignantHome(
-                          userId: widget.userId,
-                          name: widget.name,
-                        ),
-                      ),
-                    );
-                    break;
-                  case 1:
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MesSeancesScreen(
-                          userId: widget.userId,
-                          name: widget.name,
-                        ),
-                      ),
-                    );
-                    break;
-                  default:
-                }
-              },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_month),
-                  label: 'Seances',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.fact_check_outlined),
-                  label: 'Appel',
-                ),
-              ],
-              backgroundColor: ThemeColors.borderSubtle,
-              elevation: 0,
-            )
-          : null,
-    );
+      );
   }
 
   Widget _buildNoSeanceSelected() {

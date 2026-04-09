@@ -64,7 +64,7 @@ if ($method === 'GET') {
 
 	if (isset($_GET['id'])) {
 		$id = (int)$_GET['id'];
-		$stmt = $db->prepare($baseSql . " WHERE s.id = ?");
+		$stmt = $db->prepare($baseSql . " WHERE s.id = ? GROUP BY s.id, s.enseignant_id, s.classe_id, s.matiere_id, s.date_seance, s.heure_debut, s.heure_fin, c.nom, m.nom, u.nom, u.prenom");
 		$stmt->bind_param("i", $id);
 		$stmt->execute();
 		$result = $stmt->get_result();
