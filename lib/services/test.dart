@@ -108,7 +108,7 @@ Future<void> testStudentService() async {
   try {
     // Test getStudentAbsences
     final absences = await AbsenceService.getStudentAbsences(1);
-    print('  ✓ getStudentAbsences(1): ${absences.isNotEmpty ? '✅ Found ${absences.length} absences' : '❌ No absences'}');
+    print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
   } catch (e) {
     print('  ❌ getStudentAbsences() Error: $e');
   }
@@ -339,9 +339,9 @@ Future<void> testAbsenceService() async {
   try {
     // Test getStudentAbsences
     final absences = await AbsenceService.getStudentAbsences(1);
-    print('  ✓ getStudentAbsences(1): ${absences.isNotEmpty ? '✅ Found ${absences.length} absences' : '❌ No absences'}');
-    if (absences.isNotEmpty) {
-      print('    First absence: ${absences[0].status}');
+    print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
+    if (absences.$1.isNotEmpty) {
+      print('    First absence: ${absences.$1[0].status}');
     }
   } catch (e) {
     print('  ❌ getStudentAbsences() Error: $e');

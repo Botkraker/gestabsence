@@ -20,7 +20,7 @@ $data = json_decode(file_get_contents("php://input"));
 $response = array();
 if (isset($_GET["id"])) {
     $id = $_GET["id"];
-    $sql = "SELECT mat.nom, s.date_seance, s.heure_debut,s.heure_fin, abs.statut FROM absences abs INNER JOIN seances s ON abs.seance_id = s.id INNER JOIN matieres mat on s.matiere_id=mat.id WHERE abs.etudiant_id='$id';";
+    $sql = "SELECT u.nom,mat.nom as matiere, s.date_seance, s.heure_debut, s.heure_fin, abs.statut FROM absences abs INNER JOIN seances s ON abs.seance_id = s.id INNER JOIN matieres mat ON s.matiere_id = mat.id INNER JOIN etudiants e ON abs.etudiant_id = e.id INNER JOIN utilisateurs u ON e.utilisateur_id = u.id WHERE u.id = '$id';";
     $result = $db->query($sql);
     http_response_code(200);
     if ($result->num_rows > 0) {

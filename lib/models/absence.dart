@@ -17,6 +17,7 @@ class Absence {
       seance: json['seance'] is Map<String, dynamic>
           ? Seance.fromJson(json['seance'] as Map<String, dynamic>)
           : Seance(
+              matiere: json['matiere']?.toString(),
               date: DateTime.tryParse(json['date_seance']?.toString() ?? ''),
               heureDebut: json['heure_debut']?.toString(),
               heureFin: json['heure_fin']?.toString(),

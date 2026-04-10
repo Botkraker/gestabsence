@@ -13,7 +13,9 @@ class AbsenceService {
   }
 
   static Future<Map<int, String>> getSeanceAbsenceStatuses(int seanceId) async {
-    final response = await ApiService.get('/enseignant/absences.php?seanceid=$seanceId');
+    final response = await ApiService.get(
+      '/enseignant/absences.php?seanceid=$seanceId',
+    );
     if (response['success'] == 1 && response['data'] is List) {
       final statuses = <int, String>{};
       for (final item in response['data'] as List) {
@@ -30,13 +32,19 @@ class AbsenceService {
     return <int, String>{};
   }
 
-  static Future<List<Absence>> getStudentAbsences(int studentId) async {
-    final response = await ApiService.get('/etudiant/absences.php?id=$studentId');
-    if (response['success'] == 1 && response['data'] is List) {
-      return (response['data'] as List)
+  static Future<(List<Absence>, int)?> getStudentAbsences(int studentId) async {
+  final response = await ApiService.get(
+    '/etudiant/absences.php?id=$studentId',
+  );
+
+  if (response['success'] == 1 && response['data'] is List) {
+    return (
+      (response['data'] as List)
           .map((data) => Absence.fromJson(data as Map<String, dynamic>))
-          .toList();
-    }
-    return [];
+          .toList(),
+      (response['abscounter'] as int?) ?? 0
+    );
   }
+  return null;
+}
 }
