@@ -24,6 +24,7 @@ migrate_working_dir/
 #.vscode/
 
 # Flutter/Dart/Pub related
+./htdocs/gest_absence_api/config/database.php
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
