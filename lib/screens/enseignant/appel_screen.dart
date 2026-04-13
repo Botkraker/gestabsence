@@ -120,12 +120,24 @@ class _AppelScreenState extends State<AppelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Scaffold(
+      backgroundColor: ThemeColors.background,
+      appBar: AppBar(
+        title: widget.seance != null
+            ? Text(widget.seance!.matiere ?? 'Attendance')
+            : const Text('Attendance'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: widget.seance == null
             ? _buildNoSeanceSelected()
             : _buildAttendanceForSeance(),
-      );
+      ),
+    );
   }
 
   Widget _buildNoSeanceSelected() {

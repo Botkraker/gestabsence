@@ -23,7 +23,7 @@ class ClassService {
   }) async {
     return ApiService.post('/admin/classes.php', {
       'nom': nom,
-      if (niveau != null) 'niveau': niveau,
+      'niveau': ?niveau,
     });
   }
 

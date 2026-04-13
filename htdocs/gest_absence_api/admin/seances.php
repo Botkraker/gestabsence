@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -111,6 +111,38 @@ if ($method === 'POST') {
 	}
 
 	respond(201, true, "Session created", array("id" => $db->insert_id));
+}
+
+if ($method === 'PUT') {
+	$body = getBody();
+	$id = isset($body['id']) ? (int)$body['id'] : 0;
+	$enseignantId = isset($body['enseignant_id']) ? (int)$body['enseignant_id'] : 0;
+	$classeId = isset($body['classe_id']) ? (int)$body['classe_id'] : 0;
+	$matiereId = isset($body['matiere_id']) ? (int)$body['matiere_id'] : 0;
+	$dateSeance = isset($body['date_seance']) ? trim($body['date_seance']) : '';
+	$heureDebut = isset($body['heure_debut']) ? trim($body['heure_debut']) : '';
+	$heureFin = isset($body['heure_fin']) ? trim($body['heure_fin']) : '';
+
+	if ($id <= 0 || $enseignantId <= 0 || $classeId <= 0 || $matiereId <= 0 || $dateSeance === '' || $heureDebut === '' || $heureFin === '') {
+		respond(400, false, "Fields id, enseignant_id, classe_id, matiere_id, date_seance, heure_debut and heure_fin are required");
+	}
+
+	if (!ensureExists($db, 'seances', $id)) {
+		respond(404, false, "Session not found");
+	}
+
+	if (!ensureExists($db, 'enseignants', $enseignantId) || !ensureExists($db, 'classes', $classeId) || !ensureExists($db, 'matieres', $matiereId)) {
+		respond(404, false, "One or more related records do not exist");
+	}
+
+	$stmt = $db->prepare("UPDATE seances SET enseignant_id = ?, classe_id = ?, matiere_id = ?, date_seance = ?, heure_debut = ?, heure_fin = ? WHERE id = ?");
+	$stmt->bind_param("iiisssi", $enseignantId, $classeId, $matiereId, $dateSeance, $heureDebut, $heureFin, $id);
+
+	if (!$stmt->execute()) {
+		respond(500, false, "Failed to update session");
+	}
+
+	respond(200, true, "Session updated");
 }
 
 respond(405, false, "Method not allowed");
