@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -166,6 +166,48 @@ if ($method === 'PUT') {
 			respond(409, false, "Email already exists");
 		}
 		respond(500, false, "Failed to update teacher");
+	}
+}
+
+if ($method === 'DELETE') {
+	$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+	if ($id <= 0) {
+		respond(400, false, "Field id is required");
+	}
+
+	$stmt = $db->prepare("SELECT utilisateur_id FROM enseignants WHERE id = ?");
+	$stmt->bind_param("i", $id);
+	$stmt->execute();
+	$result = $stmt->get_result();
+
+	if ($result->num_rows === 0) {
+		respond(404, false, "Teacher not found");
+	}
+
+	$utilisateurId = (int)$result->fetch_assoc()['utilisateur_id'];
+	$db->begin_transaction();
+
+	try {
+		$stmtDeleteTeacher = $db->prepare("DELETE FROM enseignants WHERE id = ?");
+		$stmtDeleteTeacher->bind_param("i", $id);
+
+		if (!$stmtDeleteTeacher->execute()) {
+			throw new Exception("Failed to delete teacher");
+		}
+
+		$stmtDeleteUser = $db->prepare("DELETE FROM utilisateurs WHERE id = ?");
+		$stmtDeleteUser->bind_param("i", $utilisateurId);
+
+		if (!$stmtDeleteUser->execute()) {
+			throw new Exception("Failed to delete linked user");
+		}
+
+		$db->commit();
+		respond(200, true, "Teacher deleted");
+	} catch (Exception $e) {
+		$db->rollback();
+		respond(500, false, "Failed to delete teacher");
 	}
 }
 

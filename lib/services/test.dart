@@ -71,7 +71,7 @@ Future<void> testStudentService() async {
     final students = await StudentService.getAllStudents();
     print('  ✓ getAllStudents(): ${students.isNotEmpty ? '✅ Found ${students.length} students' : '❌ No students found'}');
     if (students.isNotEmpty) {
-      print('    First student: ${students[0].utilisateur?.nom}');
+      print('    First student: ${students[0].utilisateur.nom}');
     }
   } catch (e) {
     print('  ❌ getAllStudents() Error: $e');
@@ -82,7 +82,7 @@ Future<void> testStudentService() async {
     final student = await StudentService.getStudent(1);
     print('  ✓ getStudent(1): ${student != null ? '✅ Found' : '❌ Not found'}');
     if (student != null) {
-      print('    Student: ${student.utilisateur?.prenom} ${student.utilisateur?.nom}');
+      print('    Student: ${student.utilisateur.prenom} ${student.utilisateur.nom}');
     }
   } catch (e) {
     print('  ❌ getStudent() Error: $e');
@@ -108,7 +108,11 @@ Future<void> testStudentService() async {
   try {
     // Test getStudentAbsences
     final absences = await AbsenceService.getStudentAbsences(1);
-    print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
+    if (absences == null) {
+      print('  ✓ getStudentAbsences(1): ❌ No absences');
+    } else {
+      print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
+    }
   } catch (e) {
     print('  ❌ getStudentAbsences() Error: $e');
   }
@@ -118,7 +122,7 @@ Future<void> testStudentService() async {
     final profile = await StudentService.getStudentProfile(1);
     print('  ✓ getStudentProfile(1): ${profile != null ? '✅ Retrieved' : '❌ Failed'}');
     if (profile != null) {
-      print('    Data: ${profile}');
+      print('    Data: $profile');
     }
   } catch (e) {
     print('  ❌ getStudentProfile() Error: $e');
@@ -339,9 +343,13 @@ Future<void> testAbsenceService() async {
   try {
     // Test getStudentAbsences
     final absences = await AbsenceService.getStudentAbsences(1);
-    print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
-    if (absences.$1.isNotEmpty) {
-      print('    First absence: ${absences.$1[0].status}');
+    if (absences == null) {
+      print('  ✓ getStudentAbsences(1): ❌ No absences');
+    } else {
+      print('  ✓ getStudentAbsences(1): ${absences.$1.isNotEmpty ? '✅ Found ${absences.$1.length} absences' : '❌ No absences'}');
+      if (absences.$1.isNotEmpty) {
+        print('    First absence: ${absences.$1[0].status}');
+      }
     }
   } catch (e) {
     print('  ❌ getStudentAbsences() Error: $e');

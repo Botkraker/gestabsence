@@ -49,6 +49,18 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: {'Content-Type': _jsonHeader, 'Accept': _jsonHeader},
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {'success': 0, 'message': 'DELETE Error: $e'};
+    }
+  }
+
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
       final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;

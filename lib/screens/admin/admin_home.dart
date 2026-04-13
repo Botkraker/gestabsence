@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/screens/admin/manage_students_screen.dart';
 import 'package:gestabsence/models/seance.dart';
+import 'package:gestabsence/screens/admin/professors_screen.dart';
 import 'package:gestabsence/screens/admin/seances_screen.dart';
+import 'package:gestabsence/screens/admin/students_screen.dart';
 import 'package:gestabsence/services/class_service.dart';
 import 'package:gestabsence/services/session_service.dart';
 import 'package:gestabsence/themeapp.dart';
@@ -104,49 +107,44 @@ class _AdminHomeState extends State<AdminHome> {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isNarrow = constraints.maxWidth < 900;
+                    final boxes = [
+                      _buildManageBox(
+                        title: 'Enseignants',
+                        description: 'Manage teacher accounts and assignment data.',
+                        icon: Icons.badge_outlined,
+                        actionText: 'Manage Enseignants',
+                        onAction: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ProfessorsScreen()),
+                        ),
+                      ),
+                      _buildManageBox(
+                        title: 'Classes',
+                        description: 'Manage classes, levels, and linked entities.',
+                        icon: Icons.class_outlined,
+                        actionText: 'Manage Classes',
+                        onAction: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const StudentsScreen()),
+                        ),
+                      ),
+                    ];
+
                     if (isNarrow) {
                       return Column(
                         children: [
-                          _buildManageBox(
-                            title: 'Enseignants',
-                            description: 'Manage teacher accounts and assignment data.',
-                            icon: Icons.badge_outlined,
-                            primaryText: 'Manage Enseignants',
-                            secondaryText: 'Add Enseignant',
-                          ),
+                          boxes[0],
                           const SizedBox(height: 16),
-                          _buildManageBox(
-                            title: 'Classes',
-                            description: 'Manage classes, levels, and linked entities.',
-                            icon: Icons.class_outlined,
-                            primaryText: 'Manage Classes',
-                            secondaryText: 'Add Class',
-                          ),
+                          boxes[1],
                         ],
                       );
                     }
 
                     return Row(
                       children: [
-                        Expanded(
-                          child: _buildManageBox(
-                            title: 'Enseignants',
-                            description: 'Manage teacher accounts and assignment data.',
-                            icon: Icons.badge_outlined,
-                            primaryText: 'Manage Enseignants',
-                            secondaryText: 'Add Enseignant',
-                          ),
-                        ),
+                        Expanded(child: boxes[0]),
                         const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildManageBox(
-                            title: 'Classes',
-                            description: 'Manage classes, levels, and linked entities.',
-                            icon: Icons.class_outlined,
-                            primaryText: 'Manage Classes',
-                            secondaryText: 'Add Class',
-                          ),
-                        ),
+                        Expanded(child: boxes[1]),
                       ],
                     );
                   },
@@ -211,6 +209,20 @@ class _AdminHomeState extends State<AdminHome> {
             textAlign: TextAlign.left,
             style: ThemeTextStyles.bodyLarge,
           ),
+          const SizedBox(height: 14),
+          ElevatedButton.icon(
+            style: ThemeButtonStyles.secondary,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ManageStudentsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Manage Students'),
+          ),
         ],
       ),
     );
@@ -220,8 +232,8 @@ class _AdminHomeState extends State<AdminHome> {
     required String title,
     required String description,
     required IconData icon,
-    required String primaryText,
-    required String secondaryText,
+    required String actionText,
+    required VoidCallback onAction,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -251,23 +263,11 @@ class _AdminHomeState extends State<AdminHome> {
           const SizedBox(height: 8),
           Text(description, style: ThemeTextStyles.bodyMedium),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              ElevatedButton.icon(
-                style: ThemeButtonStyles.secondary,
-                onPressed: () {},
-                icon: const Icon(Icons.settings_outlined),
-                label: Text(primaryText),
-              ),
-              OutlinedButton.icon(
-                style: ThemeButtonStyles.outlined,
-                onPressed: () {},
-                icon: const Icon(Icons.add_circle_outline),
-                label: Text(secondaryText),
-              ),
-            ],
+          ElevatedButton.icon(
+            style: ThemeButtonStyles.secondary,
+            onPressed: onAction,
+            icon: const Icon(Icons.settings_outlined),
+            label: Text(actionText),
           ),
         ],
       ),
@@ -310,7 +310,16 @@ class _AdminHomeState extends State<AdminHome> {
               ),
               ElevatedButton.icon(
                 style: ThemeButtonStyles.secondary,
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentsScreen(
+                        initialAction: StudentsScreenAction.assignClass,
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.group_work_outlined),
                 label: const Text('Assign Class'),
               ),

@@ -32,7 +32,7 @@ class TeacherService {
       'prenom': prenom,
       'email': email,
       'password': password,
-      if (specialite != null) 'specialite': specialite,
+      'specialite': ?specialite,
     });
   }
 }
