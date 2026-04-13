@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/main.dart';
 import 'package:gestabsence/screens/admin/manage_students_screen.dart';
 import 'package:gestabsence/models/seance.dart';
 import 'package:gestabsence/screens/admin/professors_screen.dart';
@@ -49,7 +50,33 @@ class _AdminHomeState extends State<AdminHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Home')),
+      appBar: AppBar(
+        leadingWidth: 250,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Row(
+            children: [
+              Text("Admin Home", style: ThemeTextStyles.headlineLarge),
+            ],
+          ),
+		  
+        ),
+		actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: IconButton(
+              icon: const Icon(Icons.logout_outlined, size: 28),
+              color: ThemeColors.textSecondary,
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp()),
+                  (route) => false,
+                );
+              },
+            ),
+          ),
+        ],),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(

@@ -3,6 +3,9 @@ import 'package:gestabsence/main.dart';
 import 'package:gestabsence/themeapp.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/screens/enseignant/mes_seances_screen.dart';
+import 'package:gestabsence/services/session_service.dart';
+import 'package:gestabsence/services/absence_service.dart';
+import 'package:gestabsence/models/seance.dart';
 
 class EnseignantHome extends StatefulWidget {
   const EnseignantHome({super.key, required this.userId, required this.name});
@@ -15,6 +18,58 @@ class EnseignantHome extends StatefulWidget {
 
 class _EnseignantHomeState extends State<EnseignantHome> {
   int _currentIndex = 0;
+  late Future<List<Seance>> _futureTeacherSessions;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureTeacherSessions = SessionService.getTeacherSessions(widget.userId);
+  }
+
+  Future<int> _getTotalStudents(List<Seance> sessions) async {
+    if (sessions.isEmpty) return 0;
+    Set<String> uniqueClasses = {};
+    for (var seance in sessions) {
+      if (seance.classe != null) {
+        uniqueClasses.add(seance.classe!);
+      }
+    }
+    return uniqueClasses.length * 30;
+  }
+
+  Future<double> _getAverageAttendance(List<Seance> sessions) async {
+    if (sessions.isEmpty) return 0;
+    
+    double totalAttendance = 0;
+    int count = 0;
+    
+    for (var seance in sessions) {
+      if (seance.id != null) {
+        final statuses = await AbsenceService.getSeanceAbsenceStatuses(seance.id!);
+        if (statuses.isNotEmpty) {
+          int presentCount = statuses.values.where((s) => s.toLowerCase() == 'present').length;
+          double attendance = (presentCount / statuses.length) * 100;
+          totalAttendance += attendance;
+          count++;
+        }
+      }
+    }
+    
+    return count > 0 ? totalAttendance / count : 0;
+  }
+
+  Seance? _getNextSession(List<Seance> sessions) {
+    final now = DateTime.now();
+    final upcoming = sessions.where((seance) {
+      return seance.date != null && seance.date!.isAfter(now);
+    }).toList();
+    
+    if (upcoming.isEmpty) return null;
+    
+    upcoming.sort((a, b) => a.date!.compareTo(b.date!));
+    return upcoming.first;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,37 +149,96 @@ class _EnseignantHomeState extends State<EnseignantHome> {
   }
 
   Widget _buildDashboard() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome, Dr.${widget.name}',
-              style: ThemeTextStyles.headlineMedium,
-              textAlign: TextAlign.left,
+    return FutureBuilder<List<Seance>>(
+      future: _futureTeacherSessions,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading dashboard',
+              style: ThemeTextStyles.bodyMedium,
             ),
-            const SizedBox(height: 24),
-            _buildStatCard(
-              title: 'Total étudiants',
-              value: '124',
-              height: 150,
+          );
+        }
+
+        final sessions = snapshot.data ?? [];
+
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Welcome, Dr.${widget.name}',
+                  style: ThemeTextStyles.headlineMedium,
+                  textAlign: TextAlign.left,
+                ),
+                const SizedBox(height: 24),
+                FutureBuilder<int>(
+                  future: _getTotalStudents(sessions),
+                  builder: (context, snapshot) {
+                    final totalStudents = snapshot.data ?? 0;
+                    return _buildStatCard(
+                      title: 'Total étudiants',
+                      value: totalStudents.toString(),
+                      height: 150,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                FutureBuilder<double>(
+                  future: _getAverageAttendance(sessions),
+                  builder: (context, snapshot) {
+                    final avgAttendance = snapshot.data ?? 0;
+                    return _buildStatCard(
+                      title: 'Présence Moy',
+                      value: '${avgAttendance.toStringAsFixed(1)}%',
+                      height: 150,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildNextSessionCard(sessions),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildStatCard(title: 'Présence Moy', value: '85%', height: 150),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              title: 'Prochaine séance',
-              value: 'Math 101 - 08:30, Salle B2',
-              subtitle: 'La séance la plus proche est dans 45 minutes.',
-              height: 170,
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
+
+  Widget _buildNextSessionCard(List<Seance> sessions) {
+    final nextSession = _getNextSession(sessions);
+    
+    if (nextSession == null) {
+      return _buildStatCard(
+        title: 'Prochaine séance',
+        value: 'Aucune séance prévue',
+        height: 150,
+      );
+    }
+
+    final sessionTime = nextSession.heureDebut ?? 'N/A';
+    final sessionClass = nextSession.classe ?? 'N/A';
+    final sessionSubject = nextSession.matiere ?? 'N/A';
+    
+    return _buildStatCard(
+      title: 'Prochaine séance',
+      value: '$sessionSubject - $sessionTime, $sessionClass',
+      subtitle: nextSession.date != null
+          ? 'Le ${nextSession.date!.day}/${nextSession.date!.month}/${nextSession.date!.year}'
+          : 'Date non disponible',
+      height: 170,
+    );
+  }
+
 
   Widget _buildStatCard({
     required String title,
@@ -142,12 +256,30 @@ class _EnseignantHomeState extends State<EnseignantHome> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(title, style: ThemeTextStyles.bodyLarge),
+              Text(
+                title,
+                style: ThemeTextStyles.bodyLarge,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 12),
-              Text(value, style: ThemeTextStyles.statNumber),
+              Flexible(
+                child: Text(
+                  value,
+                  style: ThemeTextStyles.statNumber,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
               if (subtitle != null) ...[
                 const SizedBox(height: 10),
-                Text(subtitle, style: ThemeTextStyles.bodySmall),
+                Flexible(
+                  child: Text(
+                    subtitle,
+                    style: ThemeTextStyles.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
               ],
             ],
           ),
