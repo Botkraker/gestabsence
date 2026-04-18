@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gestabsence/models/seance.dart';
 import 'package:gestabsence/models/seance_absence_stats.dart';
+import 'package:gestabsence/models/utilisateur.dart';
 import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/services/api_service.dart';
+import 'package:gestabsence/services/class_service.dart';
+import 'package:gestabsence/services/matiere_service.dart';
+import 'package:gestabsence/services/session_service.dart';
+import 'package:gestabsence/services/teacher_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
 /// Admin screen that centralizes seance lifecycle operations:
@@ -55,32 +60,19 @@ class _SeancesScreenState extends State<SeancesScreen> {
     throw Exception(response['message']?.toString() ?? 'Failed to load seances');
   }
 
-  // Generic helper to fetch dropdown options from an endpoint.
-  // Used by the add/edit form to populate teacher/class/matiere selectors.
-  Future<List<Map<String, dynamic>>> _loadOptions(String endpoint) async {
-    final response = await ApiService.get(endpoint);
-    if (response['success'] == 1 && response['data'] is List) {
-      return (response['data'] as List)
-          .whereType<Map<String, dynamic>>()
-          .toList();
-    }
-    return <Map<String, dynamic>>[];
-  }
-
   Future<void> _openSeanceForm({SeanceAbsenceStats? existing}) async {
     // Resolve select options first; the form depends on these entities.
     // If one list is missing, form creation would not be valid.
-    final teachersRaw = await _loadOptions('/admin/enseignants.php');
-    final classesRaw = await _loadOptions('/admin/classes.php');
-    final matieresRaw = await _loadOptions('/admin/matieres.php');
+    final teachersRaw = await TeacherService.getAllTeachers();
+    final classesRaw = await ClassService.getAllClasses();
+    final matieresRaw = await MatiereService.getAllMatieres();
 
     // Normalize teacher rows to strongly-typed tuples for Dropdown widgets.
     final teachers = teachersRaw
         .map((t) {
-          final id = int.tryParse(t['enseignant_id']?.toString() ?? '');
+          final id = t.id;
           if (id == null) return null;
-          final name =
-              '${t['nom']?.toString() ?? ''} ${t['prenom']?.toString() ?? ''}'.trim();
+          final name = '${t.nom ?? ''} ${t.prenom ?? ''}'.trim();
           return (id: id, name: name.isEmpty ? 'Teacher #$id' : name);
         })
         .whereType<({int id, String name})>()
@@ -131,9 +123,9 @@ class _SeancesScreenState extends State<SeancesScreen> {
     if (existing != null) {
       // Fetch full record before editing to prefill all fields.
       // Stats list row is not always enough for all editable columns.
-      final detail = await ApiService.get('/admin/seances.php?id=${existing.id}');
-      final data = detail['data'] is Map<String, dynamic>
-          ? detail['data'] as Map<String, dynamic>
+      final response = await ApiService.get('/admin/seances.php?id=${existing.id}');
+      final data = response['data'] is Map<String, dynamic>
+          ? response['data'] as Map<String, dynamic>
           : <String, dynamic>{};
       selectedTeacherId = int.tryParse(data['enseignant_id']?.toString() ?? '');
       selectedClassId = int.tryParse(data['classe_id']?.toString() ?? '');
@@ -272,23 +264,25 @@ class _SeancesScreenState extends State<SeancesScreen> {
       return;
     }
 
-    // Payload keys map directly to backend request contract.
-    final payload = <String, dynamic>{
-      'enseignant_id': selectedTeacherId,
-      'classe_id': selectedClassId,
-      'matiere_id': selectedMatiereId,
-      'date_seance': dateController.text.trim(),
-      'heure_debut': startController.text.trim(),
-      'heure_fin': endController.text.trim(),
-    };
-
     // POST creates a new session; PUT updates the selected one.
     final response = existing == null
-        ? await ApiService.post('/admin/seances.php', payload)
-        : await ApiService.put('/admin/seances.php', {
-            ...payload,
-            'id': existing.id,
-          });
+        ? await SessionService.createSession(
+            enseignantId: selectedTeacherId!,
+            classeId: selectedClassId!,
+            matiereId: selectedMatiereId!,
+            dateSeance: dateController.text.trim(),
+            heureDebut: startController.text.trim(),
+            heureFin: endController.text.trim(),
+          )
+        : await SessionService.updateSession(
+            sessionId: existing.id,
+            enseignantId: selectedTeacherId!,
+            classeId: selectedClassId!,
+            matiereId: selectedMatiereId!,
+            dateSeance: dateController.text.trim(),
+            heureDebut: startController.text.trim(),
+            heureFin: endController.text.trim(),
+          );
 
     if (!mounted) return;
 

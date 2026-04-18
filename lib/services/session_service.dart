@@ -39,6 +39,26 @@ class SessionService {
     });
   }
 
+  static Future<Map<String, dynamic>> updateSession({
+    required int sessionId,
+    required int enseignantId,
+    required int classeId,
+    required int matiereId,
+    required String dateSeance,
+    required String heureDebut,
+    required String heureFin,
+  }) async {
+    return ApiService.put('/admin/seances.php', {
+      'id': sessionId,
+      'enseignant_id': enseignantId,
+      'classe_id': classeId,
+      'matiere_id': matiereId,
+      'date_seance': dateSeance,
+      'heure_debut': heureDebut,
+      'heure_fin': heureFin,
+    });
+  }
+
   static Future<List<Seance>> getTeacherSessions(int teacherId) async {
     final response = await ApiService.get('/enseignant/seances.php?enseignant_id=$teacherId');
     if (response['success'] == 1 && response['data'] is List) {

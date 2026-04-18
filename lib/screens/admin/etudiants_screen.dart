@@ -292,48 +292,67 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 															),
 															child: ListTile(
 																contentPadding:
-																		const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+																		const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
 																title: Text(
 																	'${student['prenom']} ${student['nom']}',
 																	style: ThemeTextStyles.headlineSmall,
 																),
+																isThreeLine: true,
 																subtitle: Column(
 																	crossAxisAlignment: CrossAxisAlignment.start,
+																	mainAxisSize: MainAxisSize.min,
 																	children: [
 																		const SizedBox(height: 2),
-																		Text(
-																			student['email']?.toString() ?? '',
-																			style: ThemeTextStyles.bodySmall,
+																		Row(
+																			children: [
+																				Expanded(
+																					child: Text(
+																						student['email']?.toString() ?? '',
+																						style: ThemeTextStyles.bodySmall,
+																						overflow: TextOverflow.ellipsis,
+																						maxLines: 1,
+																					),
+																				),
+																			],
 																		),
-																		Text(
-																			'Class: ${student['classe_nom']?.toString() ?? 'N/A'}',
-																			style: ThemeTextStyles.bodySmall,
+																		Row(
+																			children: [
+																				Expanded(
+																					child: Text(
+																						'Class: ${student['classe_nom']?.toString() ?? 'N/A'}',
+																						style: ThemeTextStyles.bodySmall,
+																						overflow: TextOverflow.ellipsis,
+																						maxLines: 1,
+																					),
+																				),
+																			],
 																		),
 																	],
 																),
-																trailing: SizedBox(
-																	width: 96,
-																	child: Row(
-																		mainAxisAlignment: MainAxisAlignment.end,
-																		children: [
-																			IconButton(
-																				icon: const Icon(
-																					Icons.edit_outlined,
-																					color: ThemeColors.primary,
-																				),
-																				tooltip: 'Edit',
-																				onPressed: () => _navigateToEdit(student),
+																trailing: Row(
+																	mainAxisSize: MainAxisSize.min,
+																	children: [
+																		IconButton(
+																			icon: const Icon(
+																				Icons.edit_outlined,
+																				color: ThemeColors.primary,
 																			),
-																			IconButton(
-																				icon: const Icon(
-																					Icons.delete_outline,
-																					color: ThemeColors.errorRed,
-																				),
-																				tooltip: 'Remove',
-																				onPressed: () => _confirmDelete(student),
+																			tooltip: 'Edit',
+																			onPressed: () => _navigateToEdit(student),
+																			padding: const EdgeInsets.all(8),
+																			constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+																		),
+																		IconButton(
+																			icon: const Icon(
+																				Icons.delete_outline,
+																				color: ThemeColors.errorRed,
 																			),
-																		],
-																	),
+																			tooltip: 'Remove',
+																			onPressed: () => _confirmDelete(student),
+																			padding: const EdgeInsets.all(8),
+																			constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+																		),
+																	],
 																),
 															),
 														);

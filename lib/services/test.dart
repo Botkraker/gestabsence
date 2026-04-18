@@ -203,7 +203,8 @@ Future<void> testSessionService() async {
 
   try {
     // Test getTeacherSessions (assuming teacher ID 1 exists)
-    final sessions = await SessionService.getTeacherSessions(1);
+    final sessions = await SessionService.getTeacherSessions(2);
+    print(sessions[1].date);
     print('  ✓ getTeacherSessions(1): ${sessions.isNotEmpty ? '✅ Found ${sessions.length} sessions' : '❌ No sessions'}');
     if (sessions.isNotEmpty) {
       print('    First session: ${sessions[0].matiere}');

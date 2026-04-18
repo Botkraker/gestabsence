@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gestabsence/services/api_service.dart';
-import 'package:gestabsence/screens/admin/admin_home.dart';
 import 'package:gestabsence/themeapp.dart';
 
 /// Admin teachers management screen.
@@ -204,26 +203,13 @@ class _EnseignantsScreenState extends State<EnseignantsScreen> {
 			backgroundColor: ThemeColors.background,
 			appBar: AppBar(
 				title: const Text('Professors'),
+				backgroundColor: ThemeColors.surface,
+				foregroundColor: ThemeColors.textPrimary,
+				elevation: 0,
 				leading: IconButton(
 					icon: const Icon(Icons.arrow_back),
-					onPressed: () => Navigator.pushReplacement(
-						context,
-						MaterialPageRoute(
-							builder: (_) => const AdminHome(name: 'Admin'),
-						),
-					),
+					onPressed: () => Navigator.of(context).maybePop(),
 				),
-				actions: [
-					Padding(
-						padding: const EdgeInsets.only(right: 12),
-						child: ElevatedButton.icon(
-							style: ThemeButtonStyles.secondary,
-							onPressed: _navigateToAdd,
-							icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-							label: const Text('Add Professor'),
-						),
-					),
-				],
 			),
 			body: Column(
 				children: [
@@ -338,7 +324,7 @@ class _TeacherTile extends StatelessWidget {
 				],
 			),
 			child: ListTile(
-				contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+				contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
 				leading: CircleAvatar(
 					radius: 24,
 					backgroundColor: ThemeColors.primary.withValues(alpha: 0.12),
@@ -352,15 +338,24 @@ class _TeacherTile extends StatelessWidget {
 					),
 				),
 				title: Text(fullName, style: ThemeTextStyles.headlineSmall),
+				isThreeLine: true,
 				subtitle: Column(
 					crossAxisAlignment: CrossAxisAlignment.start,
+					mainAxisSize: MainAxisSize.min,
 					children: [
 						const SizedBox(height: 2),
 						Row(
 							children: [
 								const Icon(Icons.email_outlined, size: 13, color: ThemeColors.textSecondary),
 								const SizedBox(width: 4),
-								Text(teacher['email'] ?? '', style: ThemeTextStyles.bodySmall),
+								Expanded(
+									child: Text(
+										teacher['email'] ?? '',
+										style: ThemeTextStyles.bodySmall,
+										overflow: TextOverflow.ellipsis,
+										maxLines: 1,
+									),
+								),
 							],
 						),
 						const SizedBox(height: 2),
@@ -368,7 +363,14 @@ class _TeacherTile extends StatelessWidget {
 							children: [
 								const Icon(Icons.menu_book_outlined, size: 13, color: ThemeColors.textSecondary),
 								const SizedBox(width: 4),
-								Text(teacher['matiere'] ?? '', style: ThemeTextStyles.bodySmall),
+								Expanded(
+									child: Text(
+										teacher['matiere'] ?? '',
+										style: ThemeTextStyles.bodySmall,
+										overflow: TextOverflow.ellipsis,
+										maxLines: 1,
+									),
+								),
 							],
 						),
 					],
@@ -380,11 +382,15 @@ class _TeacherTile extends StatelessWidget {
 							icon: const Icon(Icons.edit_outlined, color: ThemeColors.primary),
 							tooltip: 'Edit',
 							onPressed: onEdit,
+							padding: const EdgeInsets.all(8),
+							constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
 						),
 						IconButton(
 							icon: const Icon(Icons.delete_outline, color: ThemeColors.errorRed),
 							tooltip: 'Remove',
 							onPressed: onDelete,
+							padding: const EdgeInsets.all(8),
+							constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
 						),
 					],
 				),

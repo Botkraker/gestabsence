@@ -2,4 +2,4 @@
 //const String baseUrl = 'http://10.0.0.2:8067/gest_absence_api';
 
 
-final baseUrl = 'http://localhost:8067/gest_absence_api';
+final baseUrl = 'http://192.168.1.123:8067/gest_absence_api';
