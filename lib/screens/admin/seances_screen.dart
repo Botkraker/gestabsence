@@ -5,6 +5,10 @@ import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/services/api_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
+/// Admin screen that centralizes seance lifecycle operations:
+/// - list existing seances with absence metrics,
+/// - create/edit a seance,
+/// - open attendance call for a selected seance.
 class SeancesScreen extends StatefulWidget {
   const SeancesScreen({super.key});
 
@@ -13,21 +17,26 @@ class SeancesScreen extends StatefulWidget {
 }
 
 class _SeancesScreenState extends State<SeancesScreen> {
+  // Future used by FutureBuilder. Reassigned after successful create/edit/retry.
   late Future<List<SeanceAbsenceStats>> _futureSeances;
 
   @override
   void initState() {
     super.initState();
+    // Load once at startup; subsequent reloads replace this future in setState.
     _futureSeances = _loadSeances();
   }
 
   Future<List<SeanceAbsenceStats>> _loadSeances() async {
+    // Backend endpoint returns list with aggregate absence stats per seance.
     final response = await ApiService.get('/admin/seances.php');
     if (response['success'] == 1 && response['data'] is List) {
+      // Defensive conversion: keep only valid map rows.
       final items = (response['data'] as List)
           .whereType<Map<String, dynamic>>()
           .map(SeanceAbsenceStats.fromJson)
           .toList();
+      // Keep sessions chronologically ordered for predictable list behavior.
       items.sort((a, b) {
         final startA = _toDateTime(a.date, a.startTime);
         final startB = _toDateTime(b.date, b.startTime);
@@ -37,11 +46,17 @@ class _SeancesScreenState extends State<SeancesScreen> {
         if (startB == null) return -1;
         return startA.compareTo(startB);
       });
+
+      // Sorted data is returned and rendered as-is in the list view.
       return items;
     }
+
+    // Throwing here lets FutureBuilder switch to the error UI state.
     throw Exception(response['message']?.toString() ?? 'Failed to load seances');
   }
 
+  // Generic helper to fetch dropdown options from an endpoint.
+  // Used by the add/edit form to populate teacher/class/matiere selectors.
   Future<List<Map<String, dynamic>>> _loadOptions(String endpoint) async {
     final response = await ApiService.get(endpoint);
     if (response['success'] == 1 && response['data'] is List) {
@@ -53,10 +68,13 @@ class _SeancesScreenState extends State<SeancesScreen> {
   }
 
   Future<void> _openSeanceForm({SeanceAbsenceStats? existing}) async {
+    // Resolve select options first; the form depends on these entities.
+    // If one list is missing, form creation would not be valid.
     final teachersRaw = await _loadOptions('/admin/enseignants.php');
     final classesRaw = await _loadOptions('/admin/classes.php');
     final matieresRaw = await _loadOptions('/admin/matieres.php');
 
+    // Normalize teacher rows to strongly-typed tuples for Dropdown widgets.
     final teachers = teachersRaw
         .map((t) {
           final id = int.tryParse(t['enseignant_id']?.toString() ?? '');
@@ -67,6 +85,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
         })
         .whereType<({int id, String name})>()
         .toList();
+
+      // Normalize class rows to minimal (id, name) tuple format.
     final classes = classesRaw
         .map((c) {
           final id = int.tryParse(c['id']?.toString() ?? '');
@@ -75,6 +95,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
         })
         .whereType<({int id, String name})>()
         .toList();
+
+      // Normalize subject (matiere) rows to minimal (id, name) tuple format.
     final matieres = matieresRaw
         .map((m) {
           final id = int.tryParse(m['id']?.toString() ?? '');
@@ -86,6 +108,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
 
     if (!mounted) return;
 
+    // Guard: cannot create/edit a seance unless all reference entities exist.
     if (teachers.isEmpty || classes.isEmpty || matieres.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -95,14 +118,19 @@ class _SeancesScreenState extends State<SeancesScreen> {
       return;
     }
 
+    // Mutable local state for dialog controls.
     int? selectedTeacherId;
     int? selectedClassId;
     int? selectedMatiereId;
+
+    // Controllers keep input values alive while dialog rebuilds.
     final dateController = TextEditingController();
     final startController = TextEditingController();
     final endController = TextEditingController();
 
     if (existing != null) {
+      // Fetch full record before editing to prefill all fields.
+      // Stats list row is not always enough for all editable columns.
       final detail = await ApiService.get('/admin/seances.php?id=${existing.id}');
       final data = detail['data'] is Map<String, dynamic>
           ? detail['data'] as Map<String, dynamic>
@@ -115,6 +143,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
       endController.text = data['heure_fin']?.toString() ?? '';
     }
 
+    // Fallback defaults when creating or when some edit fields are missing.
+    // This ensures all dropdowns and text fields have usable initial values.
     selectedTeacherId ??= teachers.first.id;
     selectedClassId ??= classes.first.id;
     selectedMatiereId ??= matieres.first.id;
@@ -127,6 +157,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) {
+        // StatefulBuilder gives local setState for dialog-only controls.
+        // This avoids touching the parent screen state for every field change.
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
@@ -138,6 +170,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Teacher selection.
                     DropdownButtonFormField<int>(
                       value: selectedTeacherId,
                       items: teachers
@@ -150,6 +183,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                           .toList(),
                       onChanged: (value) {
                         setModalState(() {
+                        // Class selection.
                           selectedTeacherId = value;
                         });
                       },
@@ -168,6 +202,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                           .toList(),
                       onChanged: (value) {
                         setModalState(() {
+                        // Matiere selection.
                           selectedClassId = value;
                         });
                       },
@@ -181,16 +216,19 @@ class _SeancesScreenState extends State<SeancesScreen> {
                             (m) => DropdownMenuItem<int>(
                               value: m.id,
                               child: Text(m.name),
+                        // Date format expected by backend endpoint.
                             ),
                           )
                           .toList(),
                       onChanged: (value) {
                         setModalState(() {
+                        // Start time format expected by backend endpoint.
                           selectedMatiereId = value;
                         });
                       },
                       decoration: const InputDecoration(labelText: 'Matiere'),
                     ),
+                        // End time format expected by backend endpoint.
                     const SizedBox(height: 10),
                     TextField(
                       controller: dateController,
@@ -230,9 +268,11 @@ class _SeancesScreenState extends State<SeancesScreen> {
         selectedTeacherId == null ||
         selectedClassId == null ||
         selectedMatiereId == null) {
+      // User cancelled dialog or required selection is missing.
       return;
     }
 
+    // Payload keys map directly to backend request contract.
     final payload = <String, dynamic>{
       'enseignant_id': selectedTeacherId,
       'classe_id': selectedClassId,
@@ -242,6 +282,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
       'heure_fin': endController.text.trim(),
     };
 
+    // POST creates a new session; PUT updates the selected one.
     final response = existing == null
         ? await ApiService.post('/admin/seances.php', payload)
         : await ApiService.put('/admin/seances.php', {
@@ -251,6 +292,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
 
     if (!mounted) return;
 
+    // Centralized success/error toast feedback for user action confirmation.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -262,6 +304,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
     );
 
     if (response['success'] == 1) {
+      // Refresh list so the latest create/edit is immediately visible.
       setState(() {
         _futureSeances = _loadSeances();
       });
@@ -289,10 +332,12 @@ class _SeancesScreenState extends State<SeancesScreen> {
       body: FutureBuilder<List<SeanceAbsenceStats>>(
         future: _futureSeances,
         builder: (context, snapshot) {
+          // Loading state while future resolves.
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Error state with retry pathway.
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -314,6 +359,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                     ElevatedButton.icon(
                       style: ThemeButtonStyles.secondary,
                       onPressed: () {
+                        // Re-run fetch pipeline on demand.
                         setState(() {
                           _futureSeances = _loadSeances();
                         });
@@ -327,6 +373,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
             );
           }
 
+          // Data state.
           final seances = snapshot.data ?? const <SeanceAbsenceStats>[];
           if (seances.isEmpty) {
             return Center(
@@ -340,6 +387,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
             separatorBuilder: (_, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final seance = seances[index];
+
+              // Convert list item model to AppelScreen model contract.
               final selectedSeance = Seance(
                 id: seance.id,
                 matiere: seance.subjectName,
@@ -353,6 +402,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                 seance: seance,
                 onEdit: () => _openSeanceForm(existing: seance),
                 onTap: () async {
+                  // Open attendance call screen in admin mode.
                   final saved = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
@@ -366,6 +416,7 @@ class _SeancesScreenState extends State<SeancesScreen> {
                   );
 
                   if (saved == true && mounted) {
+                    // Attendance changes may alter absence stats; reload list.
                     setState(() {
                       _futureSeances = _loadSeances();
                     });
@@ -379,6 +430,8 @@ class _SeancesScreenState extends State<SeancesScreen> {
     );
   }
 
+  // Combines date + hh:mm(:ss) into DateTime for sorting/comparison.
+  // Returns null for malformed or incomplete inputs.
   DateTime? _toDateTime(DateTime? date, String? time) {
     if (date == null || time == null || time.trim().isEmpty) return null;
     final parts = time.split(':');
@@ -403,6 +456,8 @@ class _SeanceAbsenceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Visual severity color based on absence percentage thresholds.
+    // >=50% high (red), >=25% medium (warning), else healthy (green).
     final percent = seance.absencePercent;
     final barColor = percent >= 50
         ? ThemeColors.errorRed
@@ -429,6 +484,7 @@ class _SeanceAbsenceTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Seance title line with id for easy admin traceability.
                     Text(
                       '${seance.title}  #${seance.id}',
                       style: ThemeTextStyles.headlineSmall,
@@ -460,6 +516,7 @@ class _SeanceAbsenceTile extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: OutlinedButton.icon(
                         style: ThemeButtonStyles.outlined,
+                        // Edit keeps user in same screen and refreshes on save.
                         onPressed: onEdit,
                         icon: const Icon(Icons.edit_outlined),
                         label: const Text('Edit Seance'),
@@ -474,6 +531,7 @@ class _SeanceAbsenceTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    // Numeric metric plus progress bar for quick visual scanning.
                     Text(
                       '$percent%',
                       style: ThemeTextStyles.statNumber.copyWith(color: barColor),

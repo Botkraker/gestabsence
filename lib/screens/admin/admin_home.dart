@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gestabsence/main.dart';
-import 'package:gestabsence/screens/admin/manage_students_screen.dart';
+import 'package:gestabsence/screens/admin/classes_screen.dart';
+import 'package:gestabsence/screens/admin/enseignants_screen.dart';
+import 'package:gestabsence/screens/admin/etudiants_screen.dart';
 import 'package:gestabsence/models/seance.dart';
-import 'package:gestabsence/screens/admin/professors_screen.dart';
 import 'package:gestabsence/screens/admin/seances_screen.dart';
-import 'package:gestabsence/screens/admin/students_screen.dart';
 import 'package:gestabsence/services/class_service.dart';
 import 'package:gestabsence/services/session_service.dart';
 import 'package:gestabsence/themeapp.dart';
+import 'package:intl/intl.dart';
 
+/// Main admin dashboard that aggregates quick navigation and live session overview.
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key, required this.name});
 
@@ -19,30 +21,17 @@ class AdminHome extends StatefulWidget {
 }
 
 class _AdminHomeState extends State<AdminHome> {
-  static const int _initialVisibleCount = 3;
-  static const int _loadStep = 3;
-
   late Future<List<Seance>> _seancesFuture;
-  int _visibleSeanceCount = _initialVisibleCount;
 
   @override
   void initState() {
     super.initState();
+    // Fetch all seances once and reuse via FutureBuilder.
     _seancesFuture = SessionService.getAllSessions();
-  }
-
-  void _loadMore(int totalCount) {
-    setState(() {
-      _visibleSeanceCount = (_visibleSeanceCount + _loadStep).clamp(
-        _initialVisibleCount,
-        totalCount,
-      );
-    });
   }
 
   void _reloadSeances() {
     setState(() {
-      _visibleSeanceCount = _initialVisibleCount;
       _seancesFuture = SessionService.getAllSessions();
     });
   }
@@ -142,7 +131,7 @@ class _AdminHomeState extends State<AdminHome> {
                         actionText: 'Manage Enseignants',
                         onAction: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const ProfessorsScreen()),
+                          MaterialPageRoute(builder: (_) => const EnseignantsScreen()),
                         ),
                       ),
                       _buildManageBox(
@@ -152,7 +141,7 @@ class _AdminHomeState extends State<AdminHome> {
                         actionText: 'Manage Classes',
                         onAction: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const StudentsScreen()),
+                          MaterialPageRoute(builder: (_) => const ClassesScreen()),
                         ),
                       ),
                     ];
@@ -243,7 +232,7 @@ class _AdminHomeState extends State<AdminHome> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const ManageStudentsScreen(),
+                  builder: (_) => const EtudiantsScreen(),
                 ),
               );
             },
@@ -341,26 +330,27 @@ class _AdminHomeState extends State<AdminHome> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const StudentsScreen(
-                        initialAction: StudentsScreenAction.assignClass,
-                      ),
+                      builder: (_) => const ClassesScreen(),
                     ),
                   );
                 },
                 icon: const Icon(Icons.group_work_outlined),
                 label: const Text('Assign Class'),
               ),
-              OutlinedButton.icon(
-                style: ThemeButtonStyles.outlined,
-                onPressed: () {},
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('Manage Absences'),
-              ),
-              OutlinedButton.icon(
-                style: ThemeButtonStyles.outlined,
-                onPressed: () {},
-                icon: const Icon(Icons.download_outlined),
-                label: const Text('Export Report'),
+              ElevatedButton.icon(
+                style: ThemeButtonStyles.secondary,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EtudiantsScreen(
+                        openAddOnStart: true,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Add Student'),
               ),
             ],
           ),
@@ -435,9 +425,6 @@ class _AdminHomeState extends State<AdminHome> {
         }
 
         final sortedSeances = _sortSeances(seances);
-        final visibleCount = _visibleSeanceCount.clamp(0, sortedSeances.length);
-        final visibleSeances = sortedSeances.take(visibleCount).toList();
-        final hasMore = visibleCount < sortedSeances.length;
 
         return Container(
           padding: const EdgeInsets.all(14),
@@ -453,27 +440,13 @@ class _AdminHomeState extends State<AdminHome> {
                 height: 340,
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
-                  itemCount: visibleSeances.length,
+                  itemCount: sortedSeances.length,
                   separatorBuilder: (_, index) => const Divider(height: 20),
                   itemBuilder: (context, index) {
-                    return _buildSeanceTile(visibleSeances[index]);
+                    return _buildSeanceTile(sortedSeances[index]);
                   },
                 ),
               ),
-              if (hasMore) ...[
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.center,
-                  child: OutlinedButton.icon(
-                    style: ThemeButtonStyles.outlined,
-                    onPressed: () => _loadMore(sortedSeances.length),
-                    icon: const Icon(Icons.expand_more),
-                    label: Text(
-                      'View More (${sortedSeances.length - visibleCount} remaining)',
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         );
@@ -482,19 +455,13 @@ class _AdminHomeState extends State<AdminHome> {
   }
 
   Widget _buildSeanceTile(Seance seance) {
-    final status = _computeStatus(seance);
-    final color = status == 'active'
-        ? ThemeColors.liveGreen
-        : status == 'upcoming'
-            ? ThemeColors.primary
-            : ThemeColors.textSecondary;
-
+    // gets the matiere name from seances and class name and joins them together 
     final matiere = (seance.matiere ?? '').trim();
     final classe = (seance.classe ?? '').trim();
     final title = [matiere, classe].where((part) => part.isNotEmpty).join(' - ');
-
+// what is inkwell , just a clickable box : https://api.flutter.dev/flutter/material/InkWell-class.html
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      // we click it we change to seances screen
       onTap: () {
         Navigator.push(
           context,
@@ -547,84 +514,52 @@ class _AdminHomeState extends State<AdminHome> {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: color),
-              ),
-              child: Text(
-                status,
-                style: ThemeTextStyles.labelLarge.copyWith(color: color),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  String _computeStatus(Seance seance) {
-    final start = _toDateTime(seance.date, seance.heureDebut);
-    final end = _toDateTime(seance.date, seance.heureFin);
 
-    if (start == null || end == null) return 'upcoming';
 
-    final now = DateTime.now();
-    if (now.isAfter(end)) return 'finished';
-    if (now.isBefore(start)) return 'upcoming';
-    return 'active';
-  }
 
+
+
+
+
+
+
+
+
+// sort seances by date and time to view them in listview
   List<Seance> _sortSeances(List<Seance> seances) {
     final copy = List<Seance>.from(seances);
+    //sort whole list by date and time of seance, if date is null put it at the end of the list
     copy.sort((a, b) {
-      final statusA = _computeStatus(a);
-      final statusB = _computeStatus(b);
-
-      final rankDiff = _statusRank(statusA).compareTo(_statusRank(statusB));
-      if (rankDiff != 0) return rankDiff;
-
+      // convert date and time to DateTime for accurate comparison
       final startA = _toDateTime(a.date, a.heureDebut);
       final startB = _toDateTime(b.date, b.heureDebut);
-      final endA = _toDateTime(a.date, a.heureFin);
-      final endB = _toDateTime(b.date, b.heureFin);
-
-      if (statusA == 'finished') {
-        if (endA == null && endB == null) return 0;
-        if (endA == null) return 1;
-        if (endB == null) return -1;
-        return endB.compareTo(endA);
-      }
-
+    // if both are null consider them equal, if one is null put it at the end of the list
       if (startA == null && startB == null) return 0;
+      // if startA is null it should come after startB, if startB is null it should come after startA
       if (startA == null) return 1;
+      // if startB is null it should come after startA
       if (startB == null) return -1;
+      // both are not null, compare them normally
       return startA.compareTo(startB);
     });
     return copy;
   }
 
-  int _statusRank(String status) {
-    switch (status) {
-      case 'active':
-        return 0;
-      case 'upcoming':
-        return 1;
-      case 'finished':
-        return 2;
-      default:
-        return 3;
-    }
-  }
-
+// helper to convert date and time strings to DateTime, returns null if either is invalid or missing
   DateTime? _toDateTime(DateTime? date, String? time) {
+    // if either date or time is null or empty, return null
     if (date == null || time == null || time.trim().isEmpty) return null;
-
+// split time into hours and minutes
     final parts = time.split(':');
+    // if time does not have at least hours and minutes, return null
     if (parts.length < 2) return null;
-
+// parse hours and minutes, if either is invalid return null
     final hour = int.tryParse(parts[0]);
     final minute = int.tryParse(parts[1]);
     if (hour == null || minute == null) return null;
@@ -632,24 +567,23 @@ class _AdminHomeState extends State<AdminHome> {
     return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
+  // function to better visually formate date source https://api.flutter.dev/flutter/package-intl_intl/DateFormat-class.html
   String _formatDate(DateTime date) {
-    final year = date.year.toString().padLeft(4, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '$year-$month-$day';
+    return DateFormat.yMMMd().format(date);
   }
-
+//format time
   String _formatTime(String? value) {
+//if null return --:-- 
     if (value == null || value.trim().isEmpty) return '--:--';
-
+// this will only keep hours and minutes 
     final parts = value.split(':');
     if (parts.length < 2) return '--:--';
-
+// pad hours and minutes with leading zeros if needed
     final hour = parts[0].padLeft(2, '0');
     final minute = parts[1].padLeft(2, '0');
     return '$hour:$minute';
   }
-
+// returns the needed format for time 
   String _formatSeanceTime(Seance seance) {
     return '${_formatTime(seance.heureDebut)} - ${_formatTime(seance.heureFin)}';
   }
