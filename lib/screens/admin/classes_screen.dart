@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestabsence/services/api_service.dart';
+import 'package:gestabsence/services/class_service.dart';
+import 'package:gestabsence/services/matiere_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
 /// Admin classes/subjects management screen.
@@ -32,18 +33,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
       _isLoading = true;
     });
 
-    final classesResponse = await ApiService.get('/admin/classes.php');
-    final matieresResponse = await ApiService.get('/admin/matieres.php');
+    final classes = await ClassService.getAllClasses();
+    final matieres = await MatiereService.getAllMatieres();
 
     if (!mounted) return;
-
-    final classes = classesResponse['success'] == 1 && classesResponse['data'] is List
-        ? (classesResponse['data'] as List).whereType<Map<String, dynamic>>().toList()
-        : <Map<String, dynamic>>[];
-
-    final matieres = matieresResponse['success'] == 1 && matieresResponse['data'] is List
-        ? (matieresResponse['data'] as List).whereType<Map<String, dynamic>>().toList()
-        : <Map<String, dynamic>>[];
 
     setState(() {
       _classes = classes;
@@ -80,7 +73,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
     final name = nameController.text.trim();
     if (result != true || name.isEmpty) return;
 
-    final response = await ApiService.post('/admin/matieres.php', {'nom': name});
+    final response = await MatiereService.createMatiere(nom: name);
     if (!mounted) return;
 
     if (response['success'] == 1) {
@@ -131,12 +124,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
     final level = levelController.text.trim();
     if (result != true || name.isEmpty) return;
 
-    final payload = <String, dynamic>{'nom': name};
-    if (level.isNotEmpty) {
-      payload['niveau'] = level;
-    }
-
-    final response = await ApiService.post('/admin/classes.php', payload);
+    final response = await ClassService.createClass(
+      nom: name,
+      niveau: level,
+    );
     if (!mounted) return;
 
     if (response['success'] == 1) {
@@ -148,7 +139,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
   }
 
   Future<void> _deleteMatiere(int id) async {
-    final response = await ApiService.delete('/admin/matieres.php?id=$id');
+    final response = await MatiereService.deleteMatiere(id);
     if (!mounted) return;
 
     if (response['success'] == 1) {

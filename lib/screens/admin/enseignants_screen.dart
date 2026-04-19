@@ -223,7 +223,7 @@ class _EnseignantsScreenState extends State<EnseignantsScreen> {
 						),
 						child: Row(
 							children: [
-								const Icon(Icons.people, color: ThemeColors.primary, size: 20),
+								const Icon(Icons.groups_outlined, color: ThemeColors.primary, size: 20),
 								const SizedBox(width: 8),
 								Text(
 									'${_teachers.length} professor${_teachers.length == 1 ? '' : 's'} registered',

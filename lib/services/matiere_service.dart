@@ -24,4 +24,8 @@ class MatiereService {
       'nom': nom,
     });
   }
+
+  static Future<Map<String, dynamic>> deleteMatiere(int id) async {
+    return ApiService.delete('/admin/matieres.php?id=$id');
+  }
 }

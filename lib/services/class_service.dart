@@ -21,10 +21,11 @@ class ClassService {
     required String nom,
     String? niveau,
   }) async {
-    return ApiService.post('/admin/classes.php', {
-      'nom': nom,
-      'niveau': ?niveau,
-    });
+    final payload = <String, dynamic>{'nom': nom};
+    if (niveau != null && niveau.trim().isNotEmpty) {
+      payload['niveau'] = niveau;
+    }
+    return ApiService.post('/admin/classes.php', payload);
   }
 
   static Future<Map<String, dynamic>> getAdminStats() async {

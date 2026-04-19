@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -143,6 +143,27 @@ if ($method === 'PUT') {
 	}
 
 	respond(200, true, "Session updated");
+}
+
+if ($method === 'DELETE') {
+	$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+	if ($id <= 0) {
+		respond(400, false, "Field id is required");
+	}
+
+	if (!ensureExists($db, 'seances', $id)) {
+		respond(404, false, "Session not found");
+	}
+
+	$stmt = $db->prepare("DELETE FROM seances WHERE id = ?");
+	$stmt->bind_param("i", $id);
+
+	if (!$stmt->execute()) {
+		respond(500, false, "Failed to delete session");
+	}
+
+	respond(200, true, "Session deleted");
 }
 
 respond(405, false, "Method not allowed");

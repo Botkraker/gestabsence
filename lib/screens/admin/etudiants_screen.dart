@@ -8,10 +8,9 @@ import 'package:gestabsence/themeapp.dart';
 /// - Load students and classes.
 /// - Add/edit/delete students.
 /// - Search by identity and class.
-class EtudiantsScreen extends StatefulWidget {
-	const EtudiantsScreen({super.key, this.openAddOnStart = false});
 
-	final bool openAddOnStart;
+class EtudiantsScreen extends StatefulWidget {
+	const EtudiantsScreen({super.key});
 
 	@override
 	State<EtudiantsScreen> createState() => _EtudiantsScreenState();
@@ -21,8 +20,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 	List<Map<String, dynamic>> _students = <Map<String, dynamic>>[];
 	List<Map<String, dynamic>> _classes = <Map<String, dynamic>>[];
 	bool _isLoading = true;
-	bool _didRunInitialAction = false;
-	String _searchQuery = '';
+	String _searchQuery = ''; // this is the search query that used to filter
 
 	@override
 	void initState() {
@@ -38,43 +36,48 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 
 		final studentsResponse = await ApiService.get('/admin/etudiants.php');
 		final classesResponse = await ApiService.get('/admin/classes.php');
+		if (!mounted) return; 
+    // verification if the user changed widget if he did it will stop the execution of the 2 functions 
+    // else will continue 
+    
 
-		if (!mounted) return;
-
+    //hard part 
+    // this will take response from api and convert it to a list 
+    // of maps with the key value from the response and handle missing values 
+    // and type mismatches
 		final students = studentsResponse['success'] == 1 && studentsResponse['data'] is List
 				? (studentsResponse['data'] as List)
 						.whereType<Map<String, dynamic>>()
 						.map((s) => {
+              // first we try to parse id and if it fails we default to 0 
 									'id': int.tryParse(s['etudiant_id']?.toString() ?? '') ?? 0,
+                  // same with nom prenom email and classe_id we conver them to 0 or '' 
+                  // this logic to prevent the app from crashing if api response is missing a field or has a type mismatch
 									'nom': s['nom']?.toString() ?? '',
 									'prenom': s['prenom']?.toString() ?? '',
 									'email': s['email']?.toString() ?? '',
 									'classe_id': int.tryParse(s['classe_id']?.toString() ?? '') ?? 0,
 									'classe_nom': s['classe_nom']?.toString() ?? '',
 								})
-						.toList()
+						.toList() // finally we convert the iterable to a list of maps<key, value>
 				: <Map<String, dynamic>>[];
-
+    // result example List = [{id:1 , nom:"Trabelsi", prenom:"Amine",email:"student@school.com",classe_id:2,classe_nom:"CI2"}]
 		final classes = classesResponse['success'] == 1 && classesResponse['data'] is List
 				? (classesResponse['data'] as List).whereType<Map<String, dynamic>>().toList()
 				: <Map<String, dynamic>>[];
+        // same logic for classes but simpler cause it doesn't have a lot of fields to handle
 
-		setState(() {
+		setState(() { 
 			_students = students;
 			_classes = classes;
 			_isLoading = false;
-		});
+		});// after successful loading we update the state with new data 
 
-		if (!_didRunInitialAction && widget.openAddOnStart) {
-			_didRunInitialAction = true;
-			// Trigger add flow after first frame for safer navigation.
-			WidgetsBinding.instance.addPostFrameCallback((_) {
-				if (!mounted) return;
-				_navigateToAdd();
-			});
-		}
+		// ...existing code...
 	}
-
+// getter filter students 
+// how this works check if the search query matches any student list from the _students list in database 
+// if it does and returns a new list of all students that matches, it will be displayed instead of the student list
 	List<Map<String, dynamic>> get _filtered => _students.where((s) {
 				final q = _searchQuery.toLowerCase();
 				return '${s['nom']} ${s['prenom']} ${s['email']} ${s['classe_nom']}'
@@ -88,11 +91,12 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 			_showSnack('Create classes first before adding students.');
 			return;
 		}
-
+    // this will take the formulaire information key , value
+    // (value can a dynamic type and push it to the create student method)
 		final result = await Navigator.push<Map<String, dynamic>>(
 			context,
 			MaterialPageRoute(
-				builder: (_) => _StudentFormScreen(classes: _classes),
+				builder: (_) => StudentFormScreen(classes: _classes), // if this has student it will edit else it will add 
 			),
 		);
 
@@ -101,7 +105,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 		await _createStudent(result);
 	}
 
-	// Creates a student and optionally reopens edit mode for the created record.
+	// Creates a student and reloads the list.
 	Future<void> _createStudent(Map<String, dynamic> data) async {
 		final response = await ApiService.post('/admin/etudiants.php', data);
 		if (!mounted) return;
@@ -109,38 +113,24 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 		if (response['success'] == 1) {
 			_showSnack('Student added successfully');
 			await _loadData();
-
-			final createdId = int.tryParse(response['data']?['etudiant_id']?.toString() ?? '');
-			if (createdId != null && mounted) {
-				final created = _students.where((s) => s['id'] == createdId).toList();
-				if (created.isNotEmpty) {
-					await _navigateToEdit(created.first);
-				}
-			}
 		} else {
 			_showSnack(response['message']?.toString() ?? 'Failed to add student');
 		}
 	}
 
-	// Edits student data or dispatches an add request from edit screen shortcut.
+	// Edits student data.
 	Future<void> _navigateToEdit(Map<String, dynamic> student) async {
 		final result = await Navigator.push<Map<String, dynamic>>(
 			context,
 			MaterialPageRoute(
-				builder: (_) => _StudentFormScreen(
+				builder: (_) => StudentFormScreen(
 					classes: _classes,
 					student: student,
-					showAddFromEditButton: true,
 				),
 			),
 		);
 
 		if (result == null) return;
-
-		if (result['_action'] == 'add' && result['payload'] is Map<String, dynamic>) {
-			await _createStudent(result['payload'] as Map<String, dynamic>);
-			return;
-		}
 
 		final response = await ApiService.put('/admin/etudiants.php', result);
 		if (!mounted) return;
@@ -153,7 +143,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 		}
 	}
 
-	// Confirmation guard before deleting a student.
+	// Confirmation guard before deleting a student simple alert Dialog
 	Future<void> _confirmDelete(Map<String, dynamic> student) async {
 		final confirmed = await showDialog<bool>(
 			context: context,
@@ -189,12 +179,12 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 			_showSnack(response['message']?.toString() ?? 'Failed to remove student');
 		}
 	}
-
+// methode of snackbar to avoid code repetition and make it more user friendly
 	void _showSnack(String message) {
 		ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 	}
 
-	@override
+	@override 
 	Widget build(BuildContext context) {
 		final filtered = _filtered;
 
@@ -204,10 +194,10 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 				title: const Text('Students'),
 				leading: IconButton(
 					icon: const Icon(Icons.arrow_back),
-					onPressed: () => Navigator.of(context).maybePop(),
+					onPressed: () => Navigator.of(context).pop(),
 				),
 				actions: [
-					IconButton(
+					IconButton( 
 						tooltip: 'Add Student',
 						onPressed: _navigateToAdd,
 						icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -216,10 +206,10 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 				],
 			),
 			body: _isLoading
-					? const Center(child: CircularProgressIndicator())
+					? const Center(child: CircularProgressIndicator()) // if it's loading will show circular progress indicator
 					: Column(
-							children: [
-								Container(
+							children: [// first child container to display  number of students 
+								Container( 
 									margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
 									padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
 									decoration: BoxDecoration(
@@ -241,6 +231,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 										],
 									),
 								),
+                //second child is the add button
 								Padding(
 									padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
 									child: SizedBox(
@@ -253,6 +244,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 										),
 									),
 								),
+                // third child is the search text field
 								Padding(
 									padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
 									child: TextField(
@@ -264,14 +256,14 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 											fillColor: ThemeColors.surfaceAlt,
 											contentPadding: const EdgeInsets.symmetric(vertical: 0),
 										),
-										onChanged: (v) => setState(() => _searchQuery = v),
+										onChanged: (v) => setState(() => _searchQuery = v), 
 									),
 								),
 								Expanded(
 									child: filtered.isEmpty
 											? Center(
 													child: Text(
-														_searchQuery.isEmpty
+														_searchQuery.isEmpty 
 																? 'No students yet.\nTap Add Student to get started.'
 																: 'No results for "$_searchQuery"',
 														style: ThemeTextStyles.bodyMedium,
@@ -319,7 +311,7 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 																			children: [
 																				Expanded(
 																					child: Text(
-																						'Class: ${student['classe_nom']?.toString() ?? 'N/A'}',
+																						'Class: ${student['classe_nom']?.toString() ?? 'Not assigned to a class yet'}',
 																						style: ThemeTextStyles.bodySmall,
 																						overflow: TextOverflow.ellipsis,
 																						maxLines: 1,
@@ -365,32 +357,30 @@ class _EtudiantsScreenState extends State<EtudiantsScreen> {
 	}
 }
 
-/// Reusable student form used for both create and edit flows.
-class _StudentFormScreen extends StatefulWidget {
-	const _StudentFormScreen({
+/// Reusable student form used for both create and edit flows. 
+class StudentFormScreen extends StatefulWidget {
+	const StudentFormScreen({
 		required this.classes,
 		this.student,
-		this.showAddFromEditButton = false,
 	});
 
 	final List<Map<String, dynamic>> classes;
 	final Map<String, dynamic>? student;
-	final bool showAddFromEditButton;
 
 	@override
-	State<_StudentFormScreen> createState() => _StudentFormScreenState();
+	State<StudentFormScreen> createState() => _StudentFormScreenState();
 }
-
-class _StudentFormScreenState extends State<_StudentFormScreen> {
+// this where form is defined and handeled
+class _StudentFormScreenState extends State<StudentFormScreen> {
 	final _formKey = GlobalKey<FormState>();
 	final _nomController = TextEditingController();
 	final _prenomController = TextEditingController();
 	final _emailController = TextEditingController();
 	final _passwordController = TextEditingController();
 
-	bool _obscurePassword = true;
-	bool _isSaving = false;
-	int? _selectedClassId;
+	bool _obscurePassword = true;// this will hide password
+	bool _isSaving = false; // used to handle submittion (disable button when saving)
+	late int _selectedClassId;
 
 	bool get _isEditing => widget.student != null;
 
@@ -403,10 +393,10 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 			_nomController.text = s['nom']?.toString() ?? '';
 			_prenomController.text = s['prenom']?.toString() ?? '';
 			_emailController.text = s['email']?.toString() ?? '';
-			_selectedClassId = int.tryParse(s['classe_id']?.toString() ?? '');
+			_selectedClassId = int.tryParse(s['classe_id']?.toString() ?? '') ?? widget.classes.first['id'];
+		} else {
+			_selectedClassId = int.tryParse(widget.classes.first['id']?.toString() ?? '0') ?? 0;
 		}
-
-		_selectedClassId ??= int.tryParse(widget.classes.first['id']?.toString() ?? '');
 	}
 
 	@override
@@ -421,7 +411,6 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 	// Validates fields and returns a normalized payload to parent screen.
 	void _submit() {
 		if (!_formKey.currentState!.validate()) return;
-		if (_selectedClassId == null) return;
 
 		setState(() {
 			_isSaving = true;
@@ -437,23 +426,6 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 		};
 
 		Navigator.pop(context, payload);
-	}
-
-	// Allows creating a second student directly from edit mode.
-	Future<void> _addFromEdit() async {
-		final addPayload = await Navigator.push<Map<String, dynamic>>(
-			context,
-			MaterialPageRoute(
-				builder: (_) => _StudentFormScreen(classes: widget.classes),
-			),
-		);
-
-		if (!mounted || addPayload == null) return;
-
-		Navigator.pop(context, {
-			'_action': 'add',
-			'payload': addPayload,
-		});
 	}
 
 	@override
@@ -472,19 +444,28 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 						children: [
 							TextFormField(
 								controller: _nomController,
-								decoration: const InputDecoration(labelText: 'Last name'),
+								decoration: const InputDecoration(
+									labelText: 'Last name',
+									border: OutlineInputBorder(),
+								),
 								validator: (v) => v == null || v.trim().isEmpty ? 'Last name is required' : null,
 							),
-							const SizedBox(height: 14),
+							const SizedBox(height: 16),
 							TextFormField(
 								controller: _prenomController,
-								decoration: const InputDecoration(labelText: 'First name'),
+								decoration: const InputDecoration(
+									labelText: 'First name',
+									border: OutlineInputBorder(),
+								),
 								validator: (v) => v == null || v.trim().isEmpty ? 'First name is required' : null,
 							),
-							const SizedBox(height: 14),
+							const SizedBox(height: 16),
 							TextFormField(
 								controller: _emailController,
-								decoration: const InputDecoration(labelText: 'Email'),
+								decoration: const InputDecoration(
+									labelText: 'Email',
+									border: OutlineInputBorder(),
+								),
 								keyboardType: TextInputType.emailAddress,
 								validator: (v) {
 									if (v == null || v.trim().isEmpty) return 'Email is required';
@@ -492,12 +473,13 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 									return null;
 								},
 							),
-							const SizedBox(height: 14),
+							const SizedBox(height: 16),
 							TextFormField(
 								controller: _passwordController,
 								obscureText: _obscurePassword,
 								decoration: InputDecoration(
 									labelText: _isEditing ? 'New password (optional)' : 'Password',
+									border: const OutlineInputBorder(),
 									suffixIcon: IconButton(
 										onPressed: () {
 											setState(() {
@@ -514,45 +496,51 @@ class _StudentFormScreenState extends State<_StudentFormScreen> {
 									return null;
 								},
 							),
-							const SizedBox(height: 14),
-							DropdownButtonFormField<int>(
-								value: _selectedClassId,
-								items: widget.classes
-										.map(
-											(c) => DropdownMenuItem<int>(
-												value: int.tryParse(c['id']?.toString() ?? ''),
-												child: Text(c['nom']?.toString() ?? 'Class'),
+							const SizedBox(height: 16),
+							FormField<int>(
+								validator: (v) => v == null ? 'Please select a class' : null,
+								builder: (FormFieldState<int> state) {
+									return Column(
+										crossAxisAlignment: CrossAxisAlignment.start,
+										children: [
+											DropdownButton<int>(
+												value: _selectedClassId,
+												icon: const Icon(Icons.arrow_downward),
+												elevation: 16,
+												isExpanded: true,
+												onChanged: (int? value) {
+													setState(() {
+														_selectedClassId = value ?? _selectedClassId;
+													});
+													state.didChange(value);
+												},
+												items: widget.classes.map<DropdownMenuItem<int>>((Map<String, dynamic> classe) {
+													final classId = int.tryParse(classe['id']?.toString() ?? '0') ?? 0;
+													final className = classe['nom']?.toString() ?? 'Class';
+													return DropdownMenuItem<int>(
+														value: classId,
+														child: Text(className),
+													);
+												}).toList(),
 											),
-										)
-										.toList(),
-								onChanged: (value) {
-									setState(() {
-										_selectedClassId = value;
-									});
+											if (state.hasError)
+												Padding(
+													padding: const EdgeInsets.only(top: 8),
+													child: Text(
+														state.errorText ?? '',
+														style: const TextStyle(color: Colors.red, fontSize: 12),
+													),
+												),
+										],
+									);
 								},
-								decoration: const InputDecoration(labelText: 'Class'),
 							),
 							const SizedBox(height: 24),
-							SizedBox(
-								height: 50,
-								child: ElevatedButton.icon(
-									style: ThemeButtonStyles.secondary,
-									onPressed: _isSaving ? null : _submit,
-									icon: Icon(_isEditing ? Icons.save_outlined : Icons.add),
-									label: Text(_isEditing ? 'Save Changes' : 'Add Student'),
-								),
+							ElevatedButton(
+								onPressed: _isSaving ? null : _submit,
+								child: Text(_isEditing ? 'Save Changes' : 'Add Student'),
 							),
-							if (_isEditing && widget.showAddFromEditButton) ...[
-								const SizedBox(height: 12),
-								SizedBox(
-									height: 46,
-									child: OutlinedButton.icon(
-										onPressed: _isSaving ? null : _addFromEdit,
-										icon: const Icon(Icons.person_add_alt_1_outlined),
-										label: const Text('Add Student'),
-									),
-								),
-							],
+
 						],
 					),
 				),

@@ -166,8 +166,6 @@ class _AdminHomeState extends State<AdminHome> {
                   },
                 ),
                 const SizedBox(height: 20),
-                _buildQuickActionsSection(),
-                const SizedBox(height: 20),
                 Row(
                   children: [
                     const Icon(
@@ -290,71 +288,20 @@ class _AdminHomeState extends State<AdminHome> {
     );
   }
 
-  Widget _buildQuickActionsSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ThemeColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ThemeColors.borderSubtle, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.flash_on_outlined, color: ThemeColors.primary),
-              const SizedBox(width: 8),
-              Text('CI2 Quick Actions', style: ThemeTextStyles.cardTitle),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              ElevatedButton.icon(
-                style: ThemeButtonStyles.secondary,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SeancesScreen()),
-                  );
-                },
-                icon: const Icon(Icons.event_note_outlined),
-                label: const Text('View Seances'),
-              ),
-              ElevatedButton.icon(
-                style: ThemeButtonStyles.secondary,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ClassesScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.group_work_outlined),
-                label: const Text('Assign Class'),
-              ),
-              ElevatedButton.icon(
-                style: ThemeButtonStyles.secondary,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EtudiantsScreen(
-                        openAddOnStart: true,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: const Text('Add Student'),
-              ),
-            ],
-          ),
-        ],
+  Widget _buildManageSeancesIconButton() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: IconButton(
+        tooltip: 'Manage Seances',
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SeancesScreen()),
+          );
+          if (!mounted) return;
+          _reloadSeances();
+        },
+        icon: const Icon(Icons.calendar_month_outlined),
       ),
     );
   }
@@ -371,8 +318,16 @@ class _AdminHomeState extends State<AdminHome> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: ThemeColors.borderSubtle, width: 1),
             ),
-            height: 180,
-            child: const Center(child: CircularProgressIndicator()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildManageSeancesIconButton(),
+                const SizedBox(
+                  height: 120,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ],
+            ),
           );
         }
 
@@ -387,6 +342,7 @@ class _AdminHomeState extends State<AdminHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildManageSeancesIconButton(),
                 Text(
                   'Unable to load seances from server.',
                   style: ThemeTextStyles.bodyLarge,
@@ -417,9 +373,15 @@ class _AdminHomeState extends State<AdminHome> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: ThemeColors.borderSubtle, width: 1),
             ),
-            child: Text(
-              'No seances available.',
-              style: ThemeTextStyles.bodyLarge,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildManageSeancesIconButton(),
+                Text(
+                  'No seances available.',
+                  style: ThemeTextStyles.bodyLarge,
+                ),
+              ],
             ),
           );
         }
@@ -436,6 +398,7 @@ class _AdminHomeState extends State<AdminHome> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildManageSeancesIconButton(),
               SizedBox(
                 height: 340,
                 child: ListView.separated(
@@ -462,11 +425,13 @@ class _AdminHomeState extends State<AdminHome> {
 // what is inkwell , just a clickable box : https://api.flutter.dev/flutter/material/InkWell-class.html
     return InkWell(
       // we click it we change to seances screen
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const SeancesScreen()),
         );
+        if (!mounted) return;
+        _reloadSeances();
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),

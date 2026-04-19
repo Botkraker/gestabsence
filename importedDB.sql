@@ -61,8 +61,8 @@ seance_id INT NOT NULL,
 etudiant_id INT NOT NULL,
 statut ENUM('present','absent') NOT NULL DEFAULT 'present',
 UNIQUE KEY unique_appel (seance_id, etudiant_id),
-FOREIGN KEY (seance_id) REFERENCES seances(id),
-FOREIGN KEY (etudiant_id) REFERENCES etudiants(id)
+FOREIGN KEY (seance_id) REFERENCES seances(id) ON DELETE CASCADE,
+FOREIGN KEY (etudiant_id) REFERENCES etudiants(id) ON DELETE CASCADE
 );
 -- ============================================
 -- Données de test

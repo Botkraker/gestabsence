@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:gestabsence/models/seance.dart';
-import 'package:gestabsence/models/seance_absence_stats.dart';
-import 'package:gestabsence/models/utilisateur.dart';
-import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/services/api_service.dart';
-import 'package:gestabsence/services/class_service.dart';
-import 'package:gestabsence/services/matiere_service.dart';
-import 'package:gestabsence/services/session_service.dart';
-import 'package:gestabsence/services/teacher_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
-/// Admin screen that centralizes seance lifecycle operations:
-/// - list existing seances with absence metrics,
-/// - create/edit a seance,
-/// - open attendance call for a selected seance.
+/// Admin seances management screen.
+///
+/// Main capabilities:
+/// - Load seances and lookup entities.
+/// - Add/edit/delete seances.
+/// - Search by class, subject, teacher, date and time.
 class SeancesScreen extends StatefulWidget {
   const SeancesScreen({super.key});
 
@@ -22,287 +16,453 @@ class SeancesScreen extends StatefulWidget {
 }
 
 class _SeancesScreenState extends State<SeancesScreen> {
-  // Future used by FutureBuilder. Reassigned after successful create/edit/retry.
-  late Future<List<SeanceAbsenceStats>> _futureSeances;
+  List<Map<String, dynamic>> _seances = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _teachers = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _classes = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _matieres = <Map<String, dynamic>>[];
+  bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    // Load once at startup; subsequent reloads replace this future in setState.
-    _futureSeances = _loadSeances();
+    _loadData();
   }
 
-  Future<List<SeanceAbsenceStats>> _loadSeances() async {
-    // Backend endpoint returns list with aggregate absence stats per seance.
-    final response = await ApiService.get('/admin/seances.php');
-    if (response['success'] == 1 && response['data'] is List) {
-      // Defensive conversion: keep only valid map rows.
-      final items = (response['data'] as List)
-          .whereType<Map<String, dynamic>>()
-          .map(SeanceAbsenceStats.fromJson)
-          .toList();
-      // Keep sessions chronologically ordered for predictable list behavior.
-      items.sort((a, b) {
-        final startA = _toDateTime(a.date, a.startTime);
-        final startB = _toDateTime(b.date, b.startTime);
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-        if (startA == null && startB == null) return a.id.compareTo(b.id);
-        if (startA == null) return 1;
-        if (startB == null) return -1;
-        return startA.compareTo(startB);
-      });
-
-      // Sorted data is returned and rendered as-is in the list view.
-      return items;
-    }
-
-    // Throwing here lets FutureBuilder switch to the error UI state.
-    throw Exception(response['message']?.toString() ?? 'Failed to load seances');
-  }
-
-  Future<void> _openSeanceForm({SeanceAbsenceStats? existing}) async {
-    // Resolve select options first; the form depends on these entities.
-    // If one list is missing, form creation would not be valid.
-    final teachersRaw = await TeacherService.getAllTeachers();
-    final classesRaw = await ClassService.getAllClasses();
-    final matieresRaw = await MatiereService.getAllMatieres();
-
-    // Normalize teacher rows to strongly-typed tuples for Dropdown widgets.
-    final teachers = teachersRaw
-        .map((t) {
-          final id = t.id;
-          if (id == null) return null;
-          final name = '${t.nom ?? ''} ${t.prenom ?? ''}'.trim();
-          return (id: id, name: name.isEmpty ? 'Teacher #$id' : name);
-        })
-        .whereType<({int id, String name})>()
-        .toList();
-
-      // Normalize class rows to minimal (id, name) tuple format.
-    final classes = classesRaw
-        .map((c) {
-          final id = int.tryParse(c['id']?.toString() ?? '');
-          if (id == null) return null;
-          return (id: id, name: c['nom']?.toString() ?? 'Class #$id');
-        })
-        .whereType<({int id, String name})>()
-        .toList();
-
-      // Normalize subject (matiere) rows to minimal (id, name) tuple format.
-    final matieres = matieresRaw
-        .map((m) {
-          final id = int.tryParse(m['id']?.toString() ?? '');
-          if (id == null) return null;
-          return (id: id, name: m['nom']?.toString() ?? 'Matiere #$id');
-        })
-        .whereType<({int id, String name})>()
-        .toList();
+    final seancesResponse = await ApiService.get('/admin/seances.php');
+    final teachersResponse = await ApiService.get('/admin/enseignants.php');
+    final classesResponse = await ApiService.get('/admin/classes.php');
+    final matieresResponse = await ApiService.get('/admin/matieres.php');
 
     if (!mounted) return;
 
-    // Guard: cannot create/edit a seance unless all reference entities exist.
-    if (teachers.isEmpty || classes.isEmpty || matieres.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please create teachers, classes, and matieres first.'),
-        ),
-      );
+    final seances = seancesResponse['success'] == 1 && seancesResponse['data'] is List
+        ? (seancesResponse['data'] as List)
+            .whereType<Map<String, dynamic>>()
+            .map((s) => {
+                  'id': int.tryParse(s['id']?.toString() ?? '') ?? 0,
+                  'enseignant_id': int.tryParse(s['enseignant_id']?.toString() ?? '') ?? 0,
+                  'classe_id': int.tryParse(s['classe_id']?.toString() ?? '') ?? 0,
+                  'matiere_id': int.tryParse(s['matiere_id']?.toString() ?? '') ?? 0,
+                  'date_seance': s['date_seance']?.toString() ?? '',
+                  'heure_debut': s['heure_debut']?.toString() ?? '',
+                  'heure_fin': s['heure_fin']?.toString() ?? '',
+                  'enseignant_nom': s['enseignant_nom']?.toString() ?? '',
+                  'enseignant_prenom': s['enseignant_prenom']?.toString() ?? '',
+                  'classe_nom': s['classe_nom']?.toString() ?? '',
+                  'matiere_nom': s['matiere_nom']?.toString() ?? '',
+                })
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    final teachers = teachersResponse['success'] == 1 && teachersResponse['data'] is List
+        ? (teachersResponse['data'] as List)
+            .whereType<Map<String, dynamic>>()
+            .map((t) => {
+                  'id': int.tryParse(t['enseignant_id']?.toString() ?? '') ?? 0,
+                  'nom': t['nom']?.toString() ?? '',
+                  'prenom': t['prenom']?.toString() ?? '',
+                })
+            .where((t) => (t['id'] as int) > 0)
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    final classes = classesResponse['success'] == 1 && classesResponse['data'] is List
+        ? (classesResponse['data'] as List)
+            .whereType<Map<String, dynamic>>()
+            .map((c) => {
+                  'id': int.tryParse(c['id']?.toString() ?? '') ?? 0,
+                  'nom': c['nom']?.toString() ?? '',
+                })
+            .where((c) => (c['id'] as int) > 0)
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    final matieres = matieresResponse['success'] == 1 && matieresResponse['data'] is List
+        ? (matieresResponse['data'] as List)
+            .whereType<Map<String, dynamic>>()
+            .map((m) => {
+                  'id': int.tryParse(m['id']?.toString() ?? '') ?? 0,
+                  'nom': m['nom']?.toString() ?? '',
+                })
+            .where((m) => (m['id'] as int) > 0)
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    setState(() {
+      _seances = seances;
+      _teachers = teachers;
+      _classes = classes;
+      _matieres = matieres;
+      _isLoading = false;
+    });
+  }
+
+  List<Map<String, dynamic>> get _filtered => _seances.where((s) {
+        final q = _searchQuery.toLowerCase();
+        final teacher = '${s['enseignant_nom']} ${s['enseignant_prenom']}'.trim();
+        return '${s['matiere_nom']} ${s['classe_nom']} $teacher ${s['date_seance']} ${s['heure_debut']} ${s['heure_fin']}'
+            .toLowerCase()
+            .contains(q);
+      }).toList();
+
+  Future<void> _navigateToAdd() async {
+    if (_teachers.isEmpty || _classes.isEmpty || _matieres.isEmpty) {
+      _showSnack('Create teachers, classes, and matieres first.');
       return;
     }
 
-    // Mutable local state for dialog controls.
-    int? selectedTeacherId;
-    int? selectedClassId;
-    int? selectedMatiereId;
-
-    // Controllers keep input values alive while dialog rebuilds.
-    final dateController = TextEditingController();
-    final startController = TextEditingController();
-    final endController = TextEditingController();
-
-    if (existing != null) {
-      // Fetch full record before editing to prefill all fields.
-      // Stats list row is not always enough for all editable columns.
-      final response = await ApiService.get('/admin/seances.php?id=${existing.id}');
-      final data = response['data'] is Map<String, dynamic>
-          ? response['data'] as Map<String, dynamic>
-          : <String, dynamic>{};
-      selectedTeacherId = int.tryParse(data['enseignant_id']?.toString() ?? '');
-      selectedClassId = int.tryParse(data['classe_id']?.toString() ?? '');
-      selectedMatiereId = int.tryParse(data['matiere_id']?.toString() ?? '');
-      dateController.text = data['date_seance']?.toString() ?? '';
-      startController.text = data['heure_debut']?.toString() ?? '';
-      endController.text = data['heure_fin']?.toString() ?? '';
-    }
-
-    // Fallback defaults when creating or when some edit fields are missing.
-    // This ensures all dropdowns and text fields have usable initial values.
-    selectedTeacherId ??= teachers.first.id;
-    selectedClassId ??= classes.first.id;
-    selectedMatiereId ??= matieres.first.id;
-    dateController.text = dateController.text.isEmpty
-        ? DateTime.now().toIso8601String().split('T').first
-        : dateController.text;
-    startController.text = startController.text.isEmpty ? '08:00:00' : startController.text;
-    endController.text = endController.text.isEmpty ? '10:00:00' : endController.text;
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        // StatefulBuilder gives local setState for dialog-only controls.
-        // This avoids touching the parent screen state for every field change.
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AlertDialog(
-              backgroundColor: ThemeColors.surface,
-              title: Text(existing == null ? 'Add Seance' : 'Edit Seance'),
-              content: SizedBox(
-                width: 420,
-                child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Teacher selection.
-                    DropdownButtonFormField<int>(
-                      value: selectedTeacherId,
-                      items: teachers
-                          .map(
-                            (t) => DropdownMenuItem<int>(
-                              value: t.id,
-                              child: Text(t.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setModalState(() {
-                        // Class selection.
-                          selectedTeacherId = value;
-                        });
-                      },
-                      decoration: const InputDecoration(labelText: 'Teacher'),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<int>(
-                      value: selectedClassId,
-                      items: classes
-                          .map(
-                            (c) => DropdownMenuItem<int>(
-                              value: c.id,
-                              child: Text(c.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setModalState(() {
-                        // Matiere selection.
-                          selectedClassId = value;
-                        });
-                      },
-                      decoration: const InputDecoration(labelText: 'Class'),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<int>(
-                      value: selectedMatiereId,
-                      items: matieres
-                          .map(
-                            (m) => DropdownMenuItem<int>(
-                              value: m.id,
-                              child: Text(m.name),
-                        // Date format expected by backend endpoint.
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setModalState(() {
-                        // Start time format expected by backend endpoint.
-                          selectedMatiereId = value;
-                        });
-                      },
-                      decoration: const InputDecoration(labelText: 'Matiere'),
-                    ),
-                        // End time format expected by backend endpoint.
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: dateController,
-                      decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: startController,
-                      decoration: const InputDecoration(labelText: 'Start (HH:MM:SS)'),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: endController,
-                      decoration: const InputDecoration(labelText: 'End (HH:MM:SS)'),
-                    ),
-                  ],
-                ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(existing == null ? 'Create' : 'Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (saved != true ||
-        selectedTeacherId == null ||
-        selectedClassId == null ||
-        selectedMatiereId == null) {
-      // User cancelled dialog or required selection is missing.
-      return;
-    }
-
-    // POST creates a new session; PUT updates the selected one.
-    final response = existing == null
-        ? await SessionService.createSession(
-            enseignantId: selectedTeacherId!,
-            classeId: selectedClassId!,
-            matiereId: selectedMatiereId!,
-            dateSeance: dateController.text.trim(),
-            heureDebut: startController.text.trim(),
-            heureFin: endController.text.trim(),
-          )
-        : await SessionService.updateSession(
-            sessionId: existing.id,
-            enseignantId: selectedTeacherId!,
-            classeId: selectedClassId!,
-            matiereId: selectedMatiereId!,
-            dateSeance: dateController.text.trim(),
-            heureDebut: startController.text.trim(),
-            heureFin: endController.text.trim(),
-          );
-
-    if (!mounted) return;
-
-    // Centralized success/error toast feedback for user action confirmation.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          response['success'] == 1
-              ? (existing == null ? 'Seance created.' : 'Seance updated.')
-              : (response['message']?.toString() ?? 'Operation failed.'),
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _SeanceFormScreen(
+          teachers: _teachers,
+          classes: _classes,
+          matieres: _matieres,
         ),
       ),
     );
 
+    if (result == null) return;
+
+    await _createSeance(result);
+  }
+
+  Future<void> _createSeance(Map<String, dynamic> data) async {
+    final response = await ApiService.post('/admin/seances.php', data);
+    if (!mounted) return;
+
     if (response['success'] == 1) {
-      // Refresh list so the latest create/edit is immediately visible.
-      setState(() {
-        _futureSeances = _loadSeances();
-      });
+      _showSnack('Seance added successfully');
+      await _loadData();
+    } else {
+      _showSnack(response['message']?.toString() ?? 'Failed to add seance');
     }
+  }
+
+  Future<void> _navigateToEdit(Map<String, dynamic> seance) async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _SeanceFormScreen(
+          teachers: _teachers,
+          classes: _classes,
+          matieres: _matieres,
+          seance: seance,
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    final response = await ApiService.put('/admin/seances.php', result);
+    if (!mounted) return;
+
+    if (response['success'] == 1) {
+      _showSnack('Seance updated successfully');
+      await _loadData();
+    } else {
+      _showSnack(response['message']?.toString() ?? 'Failed to update seance');
+    }
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> seance) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove Seance'),
+        content: Text(
+          'Are you sure you want to remove ${seance['matiere_nom']} - ${seance['classe_nom']}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: ThemeColors.errorRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final response = await ApiService.delete('/admin/seances.php?id=${seance['id']}');
+    if (!mounted) return;
+
+    if (response['success'] == 1) {
+      _showSnack('Seance removed');
+      await _loadData();
+    } else {
+      _showSnack(response['message']?.toString() ?? 'Failed to remove seance');
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+
+    return Scaffold(
+      backgroundColor: ThemeColors.background,
+      appBar: AppBar(
+        title: const Text('Seances'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Add Seance',
+            onPressed: _navigateToAdd,
+            icon: const Icon(Icons.add),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: ThemeColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: ThemeColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_outlined, color: ThemeColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_seances.length} seance${_seances.length == 1 ? '' : 's'} registered',
+                        style: ThemeTextStyles.bodyMedium.copyWith(
+                          color: ThemeColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ThemeButtonStyles.secondary,
+                      onPressed: _navigateToAdd,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Seance'),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search by subject, class, teacher, date or time...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: ThemeColors.surfaceAlt,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                  ),
+                ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Text(
+                            _searchQuery.isEmpty
+                                ? 'No seances yet.\nTap Add Seance to get started.'
+                                : 'No results for "$_searchQuery"',
+                            style: ThemeTextStyles.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final seance = filtered[index];
+                            final teacher =
+                                '${seance['enseignant_nom']} ${seance['enseignant_prenom']}'.trim();
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: ThemeColors.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: ThemeColors.borderSubtle),
+                              ),
+                              child: ListTile(
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                title: Text(
+                                  '${seance['matiere_nom']} - ${seance['classe_nom']}',
+                                  style: ThemeTextStyles.headlineSmall,
+                                ),
+                                isThreeLine: true,
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Teacher: ${teacher.isEmpty ? 'N/A' : teacher}',
+                                      style: ThemeTextStyles.bodySmall,
+                                    ),
+                                    Text(
+                                      'Date: ${seance['date_seance']}   Time: ${_formatTime(seance['heure_debut']?.toString())} - ${_formatTime(seance['heure_fin']?.toString())}',
+                                      style: ThemeTextStyles.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: ThemeColors.primary,
+                                      ),
+                                      tooltip: 'Edit',
+                                      onPressed: () => _navigateToEdit(seance),
+                                      padding: const EdgeInsets.all(8),
+                                      constraints:
+                                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: ThemeColors.errorRed,
+                                      ),
+                                      tooltip: 'Remove',
+                                      onPressed: () => _confirmDelete(seance),
+                                      padding: const EdgeInsets.all(8),
+                                      constraints:
+                                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  String _formatTime(String? value) {
+    if (value == null || value.trim().isEmpty) return '--:--';
+    final parts = value.split(':');
+    if (parts.length < 2) return '--:--';
+    final hour = parts[0].padLeft(2, '0');
+    final minute = parts[1].padLeft(2, '0');
+    return '$hour:$minute';
+  }
+}
+
+class _SeanceFormScreen extends StatefulWidget {
+  const _SeanceFormScreen({
+    required this.teachers,
+    required this.classes,
+    required this.matieres,
+    this.seance,
+  });
+
+  final List<Map<String, dynamic>> teachers;
+  final List<Map<String, dynamic>> classes;
+  final List<Map<String, dynamic>> matieres;
+  final Map<String, dynamic>? seance;
+
+  @override
+  State<_SeanceFormScreen> createState() => _SeanceFormScreenState();
+}
+
+class _SeanceFormScreenState extends State<_SeanceFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _dateController = TextEditingController();
+  final _startController = TextEditingController();
+  final _endController = TextEditingController();
+
+  bool _isSaving = false;
+  late int _selectedTeacherId;
+  late int _selectedClassId;
+  late int _selectedMatiereId;
+
+  bool get _isEditing => widget.seance != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (_isEditing) {
+      final s = widget.seance!;
+      _selectedTeacherId = int.tryParse(s['enseignant_id']?.toString() ?? '') ??
+          int.tryParse(widget.teachers.first['id']?.toString() ?? '0') ??
+          0;
+      _selectedClassId = int.tryParse(s['classe_id']?.toString() ?? '') ??
+          int.tryParse(widget.classes.first['id']?.toString() ?? '0') ??
+          0;
+      _selectedMatiereId = int.tryParse(s['matiere_id']?.toString() ?? '') ??
+          int.tryParse(widget.matieres.first['id']?.toString() ?? '0') ??
+          0;
+      _dateController.text = s['date_seance']?.toString() ?? '';
+      _startController.text = s['heure_debut']?.toString() ?? '';
+      _endController.text = s['heure_fin']?.toString() ?? '';
+    } else {
+      _selectedTeacherId = int.tryParse(widget.teachers.first['id']?.toString() ?? '0') ?? 0;
+      _selectedClassId = int.tryParse(widget.classes.first['id']?.toString() ?? '0') ?? 0;
+      _selectedMatiereId = int.tryParse(widget.matieres.first['id']?.toString() ?? '0') ?? 0;
+      _dateController.text = DateTime.now().toIso8601String().split('T').first;
+      _startController.text = '08:00:00';
+      _endController.text = '10:00:00';
+    }
+  }
+
+  @override
+  void dispose() {
+    _dateController.dispose();
+    _startController.dispose();
+    _endController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    final payload = <String, dynamic>{
+      'enseignant_id': _selectedTeacherId,
+      'classe_id': _selectedClassId,
+      'matiere_id': _selectedMatiereId,
+      'date_seance': _dateController.text.trim(),
+      'heure_debut': _startController.text.trim(),
+      'heure_fin': _endController.text.trim(),
+      if (_isEditing) 'id': int.tryParse(widget.seance!['id']?.toString() ?? '0') ?? 0,
+    };
+
+    Navigator.pop(context, payload);
   }
 
   @override
@@ -310,238 +470,111 @@ class _SeancesScreenState extends State<SeancesScreen> {
     return Scaffold(
       backgroundColor: ThemeColors.background,
       appBar: AppBar(
-        title: const Text('Seances'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Add Seance',
-            icon: const Icon(Icons.add),
-            onPressed: () => _openSeanceForm(),
-          ),
-        ],
+        title: Text(_isEditing ? 'Edit Seance' : 'Add Seance'),
       ),
-      body: FutureBuilder<List<SeanceAbsenceStats>>(
-        future: _futureSeances,
-        builder: (context, snapshot) {
-          // Loading state while future resolves.
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Error state with retry pathway.
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Unable to load seances.',
-                      style: ThemeTextStyles.bodyLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      snapshot.error.toString(),
-                      style: ThemeTextStyles.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      style: ThemeButtonStyles.secondary,
-                      onPressed: () {
-                        // Re-run fetch pipeline on demand.
-                        setState(() {
-                          _futureSeances = _loadSeances();
-                        });
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          // Data state.
-          final seances = snapshot.data ?? const <SeanceAbsenceStats>[];
-          if (seances.isEmpty) {
-            return Center(
-              child: Text('No seances found.', style: ThemeTextStyles.bodyLarge),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: seances.length,
-            separatorBuilder: (_, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final seance = seances[index];
-
-              // Convert list item model to AppelScreen model contract.
-              final selectedSeance = Seance(
-                id: seance.id,
-                matiere: seance.subjectName,
-                classe: seance.className,
-                date: seance.date,
-                heureDebut: seance.startTime,
-                heureFin: seance.endTime,
-              );
-
-              return _SeanceAbsenceTile(
-                seance: seance,
-                onEdit: () => _openSeanceForm(existing: seance),
-                onTap: () async {
-                  // Open attendance call screen in admin mode.
-                  final saved = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AppelScreen(
-                        userId: 0,
-                        name: 'Admin',
-                        seance: selectedSeance,
-                        showNavigation: false,
-                      ),
-                    ),
-                  );
-
-                  if (saved == true && mounted) {
-                    // Attendance changes may alter absence stats; reload list.
-                    setState(() {
-                      _futureSeances = _loadSeances();
-                    });
-                  }
-                },
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  // Combines date + hh:mm(:ss) into DateTime for sorting/comparison.
-  // Returns null for malformed or incomplete inputs.
-  DateTime? _toDateTime(DateTime? date, String? time) {
-    if (date == null || time == null || time.trim().isEmpty) return null;
-    final parts = time.split(':');
-    if (parts.length < 2) return null;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return null;
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-}
-
-class _SeanceAbsenceTile extends StatelessWidget {
-  const _SeanceAbsenceTile({
-    required this.seance,
-    required this.onTap,
-    required this.onEdit,
-  });
-
-  final SeanceAbsenceStats seance;
-  final VoidCallback onTap;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    // Visual severity color based on absence percentage thresholds.
-    // >=50% high (red), >=25% medium (warning), else healthy (green).
-    final percent = seance.absencePercent;
-    final barColor = percent >= 50
-        ? ThemeColors.errorRed
-        : percent >= 25
-            ? ThemeColors.tertiaryLight
-            : ThemeColors.liveGreen;
-
-    return Material(
-      color: ThemeColors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: ThemeColors.borderSubtle, width: 1),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Seance title line with id for easy admin traceability.
-                    Text(
-                      '${seance.title}  #${seance.id}',
-                      style: ThemeTextStyles.headlineSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Teacher: ${seance.teacherName}',
-                      style: ThemeTextStyles.bodyMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Class: ${seance.className}',
-                      style: ThemeTextStyles.bodySmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Absences: ${seance.absentCount}/${seance.totalCount}',
-                      style: ThemeTextStyles.bodySmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Tap to manage attendance',
-                      style: ThemeTextStyles.bodySmall.copyWith(
-                        color: ThemeColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: OutlinedButton.icon(
-                        style: ThemeButtonStyles.outlined,
-                        // Edit keeps user in same screen and refreshes on save.
-                        onPressed: onEdit,
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit Seance'),
-                      ),
-                    ),
-                  ],
+              DropdownButtonFormField<int>(
+                value: _selectedTeacherId,
+                decoration: const InputDecoration(
+                  labelText: 'Teacher',
+                  border: OutlineInputBorder(),
                 ),
+                items: widget.teachers.map<DropdownMenuItem<int>>((t) {
+                  final id = int.tryParse(t['id']?.toString() ?? '0') ?? 0;
+                  final fullName = '${t['nom'] ?? ''} ${t['prenom'] ?? ''}'.trim();
+                  return DropdownMenuItem<int>(
+                    value: id,
+                    child: Text(fullName.isEmpty ? 'Teacher #$id' : fullName),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTeacherId = value ?? _selectedTeacherId;
+                  });
+                },
+                validator: (v) => v == null || v == 0 ? 'Please select a teacher' : null,
               ),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 120,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Numeric metric plus progress bar for quick visual scanning.
-                    Text(
-                      '$percent%',
-                      style: ThemeTextStyles.statNumber.copyWith(color: barColor),
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 8,
-                        value: percent / 100,
-                        backgroundColor: ThemeColors.surfaceAlt,
-                        valueColor: AlwaysStoppedAnimation<Color>(barColor),
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: _selectedClassId,
+                decoration: const InputDecoration(
+                  labelText: 'Class',
+                  border: OutlineInputBorder(),
                 ),
+                items: widget.classes.map<DropdownMenuItem<int>>((c) {
+                  final id = int.tryParse(c['id']?.toString() ?? '0') ?? 0;
+                  final name = c['nom']?.toString() ?? 'Class #$id';
+                  return DropdownMenuItem<int>(
+                    value: id,
+                    child: Text(name),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedClassId = value ?? _selectedClassId;
+                  });
+                },
+                validator: (v) => v == null || v == 0 ? 'Please select a class' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: _selectedMatiereId,
+                decoration: const InputDecoration(
+                  labelText: 'Matiere',
+                  border: OutlineInputBorder(),
+                ),
+                items: widget.matieres.map<DropdownMenuItem<int>>((m) {
+                  final id = int.tryParse(m['id']?.toString() ?? '0') ?? 0;
+                  final name = m['nom']?.toString() ?? 'Matiere #$id';
+                  return DropdownMenuItem<int>(
+                    value: id,
+                    child: Text(name),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedMatiereId = value ?? _selectedMatiereId;
+                  });
+                },
+                validator: (v) => v == null || v == 0 ? 'Please select a matiere' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dateController,
+                decoration: const InputDecoration(
+                  labelText: 'Date (YYYY-MM-DD)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Date is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _startController,
+                decoration: const InputDecoration(
+                  labelText: 'Start (HH:MM:SS)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Start time is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _endController,
+                decoration: const InputDecoration(
+                  labelText: 'End (HH:MM:SS)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'End time is required' : null,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _submit,
+                child: Text(_isEditing ? 'Save Changes' : 'Add Seance'),
               ),
             ],
           ),
