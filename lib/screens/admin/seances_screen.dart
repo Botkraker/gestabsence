@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gestabsence/models/seance.dart';
+import 'package:gestabsence/screens/enseignant/appel_screen.dart';
 import 'package:gestabsence/services/api_service.dart';
 import 'package:gestabsence/themeapp.dart';
 
@@ -312,6 +314,23 @@ class _SeancesScreenState extends State<SeancesScreen> {
                               child: ListTile(
                                 contentPadding:
                                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                onTap: () {
+                                  final selectedSeance = Seance.fromJson(seance);
+                                  final teacherName =
+                                      '${seance['enseignant_nom']} ${seance['enseignant_prenom']}'
+                                          .trim();
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AppelScreen(
+                                        userId: (seance['enseignant_id'] as int?) ?? 0,
+                                        name: teacherName.isEmpty ? 'Admin' : teacherName,
+                                        seance: selectedSeance,
+                                      ),
+                                    ),
+                                  );
+                                },
                                 title: Text(
                                   '${seance['matiere_nom']} - ${seance['classe_nom']}',
                                   style: ThemeTextStyles.headlineSmall,
